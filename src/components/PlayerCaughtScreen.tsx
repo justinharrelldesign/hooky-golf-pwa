@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import svgPaths from "../imports/svg-rn5lzjdsev";
 import svgPathsHome from "../imports/svg-zoxknpw915";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
+import defaultAvatarImg from "figma:asset/6ee3186278c9cc7ba61d44c3a4ce6717ab8d7e8b.png";
 
 interface Player {
   id: string;

@@ -7,6 +7,7 @@ export default defineConfig({
     postcss: './postcss.config.js',
   },
   build: {
+    outDir: 'dist', // Output to dist directory to match Netlify default
     // Ensure service worker and manifest are copied
     rollupOptions: {
       output: {
