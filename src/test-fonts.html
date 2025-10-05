@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Font Test - Hooky Golf</title>
+    
+    <!-- Same font loading as main app -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&family=Luckiest+Guy&display=block" />
+    <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&family=Luckiest+Guy&display=block" rel="stylesheet" />
+    <link rel="preload" as="font" type="font/woff2" href="https://fonts.gstatic.com/s/luckiestguy/v22/1Ptog8fLXP2dlUXx9VnvnuGdCNNT.woff2" crossorigin />
+    
+    <style>
+        body {
+            font-family: 'Geologica', sans-serif;
+            padding: 40px;
+            background: #cee7bd;
+            color: #282828;
+        }
+        
+        h1 {
+            font-family: 'Luckiest Guy', system-ui, sans-serif !important;
+            font-weight: 400 !important;
+            font-style: normal !important;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .test-heading {
+            font-family: 'Luckiest Guy', system-ui, sans-serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 32px;
+            margin: 20px 0;
+        }
+        
+        p {
+            font-family: 'Geologica', sans-serif;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        
+        .info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Font Test: Hooky Golf</h1>
+    
+    <div class="info">
+        <p><strong>This page tests font loading for Hooky Golf.</strong></p>
+        <p>If you can see this text in a bold, cartoonish font above, "Luckiest Guy" is loading correctly!</p>
+    </div>
+    
+    <div class="test-heading">Play Hooky Golf</div>
+    
+    <h1>Secretary Sarah</h1>
+    <h1>Deadline Dan</h1>
+    <h1>HOOKY GOLF ROUND</h1>
+    
+    <p>This text should be in Geologica font (clean, modern sans-serif).</p>
+    
+    <div class="info">
+        <h3 style="font-family: 'Luckiest Guy', system-ui, sans-serif; font-weight: 400; font-style: normal;">Font Check Instructions:</h3>
+        <ul>
+            <li><strong>Luckiest Guy</strong> - Should be bold, playful, cartoonish (used for all headings)</li>
+            <li><strong>Geologica</strong> - Should be clean, modern, professional (used for body text)</li>
+        </ul>
+        <p>If fonts aren't loading, check your browser's Network tab for font loading errors.</p>
+    </div>
+    
+    <script>
+        // Check if fonts are loaded
+        document.fonts.ready.then(function() {
+            const luckiestGuyLoaded = document.fonts.check("400 1em 'Luckiest Guy'");
+            const geologicaLoaded = document.fonts.check("400 1em 'Geologica'");
+            
+            console.log('Luckiest Guy loaded:', luckiestGuyLoaded);
+            console.log('Geologica loaded:', geologicaLoaded);
+            
+            if (!luckiestGuyLoaded) {
+                alert('⚠️ Luckiest Guy font failed to load!');
+            } else {
+                console.log('✅ All fonts loaded successfully!');
+            }
+        });
+    </script>
+</body>
+</html>

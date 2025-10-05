@@ -1,0 +1,17 @@
+[build]
+  command = "npm run build"
+  publish = "build"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Allow Google Fonts to load
+    Content-Security-Policy = "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval';"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

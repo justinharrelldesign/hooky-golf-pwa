@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Font Test - Luckiest Guy</title>
+    
+    <!-- Load fonts exactly as in main app -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=block');
+        
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #cee7bd;
+            color: #282828;
+            text-align: center;
+        }
+        
+        h1 {
+            font-family: 'Luckiest Guy', cursive, system-ui, sans-serif;
+            font-weight: 400;
+            font-style: normal;
+            font-size: 48px;
+            margin: 20px 0;
+            color: #517b34;
+        }
+        
+        .test {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            margin: 20px 0;
+        }
+        
+        .fallback {
+            font-family: cursive;
+            font-size: 48px;
+            color: #999;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test">
+        <p><strong>Testing Luckiest Guy Font Loading</strong></p>
+        
+        <h1>Play Hooky Golf</h1>
+        <h1>Secretary Sarah</h1>
+        <h1>Deadline Dan</h1>
+        
+        <p style="margin-top: 40px;"><strong>VS Fallback Cursive Font:</strong></p>
+        <div class="fallback">Play Hooky Golf</div>
+        
+        <p style="margin-top: 40px; font-size: 14px; color: #666;">
+            If both headings look the same (italic/cursive), the font isn't loading.<br>
+            "Play Hooky Golf" should be BOLD and BLOCKY, not italic/thin.<br>
+            Open browser console to check for font loading errors.
+        </p>
+    </div>
+    
+    <script>
+        // Log font loading status
+        if ('fonts' in document) {
+            document.fonts.ready.then(() => {
+                const loaded = document.fonts.check("400 48px 'Luckiest Guy'");
+                console.log('Luckiest Guy loaded:', loaded);
+                
+                if (!loaded) {
+                    document.body.innerHTML += '<div class="test" style="background: #ff6b6b; color: white;"><h2>❌ FONT FAILED TO LOAD</h2><p>Check Network tab for blocked requests</p></div>';
+                } else {
+                    document.body.innerHTML += '<div class="test" style="background: #51cf66; color: white;"><h2>✅ FONT LOADED SUCCESSFULLY</h2></div>';
+                }
+            });
+        }
+        
+        // Also check after 2 seconds
+        setTimeout(() => {
+            console.log('All fonts:', Array.from(document.fonts).map(f => f.family));
+        }, 2000);
+    </script>
+</body>
+</html>

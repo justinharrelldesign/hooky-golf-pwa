@@ -1,0 +1,102 @@
+═══════════════════════════════════════════════════════════
+  🏌️ HOOKY GOLF - QUICK DEPLOYMENT (Option A: PWA)
+═══════════════════════════════════════════════════════════
+
+⏱️  TOTAL TIME: 10 MINUTES
+💰 TOTAL COST: $0
+📱 WORKS ON: iPhone, Android, Desktop
+
+═══════════════════════════════════════════════════════════
+  STEP 1: PUSH TO GITHUB (2 min)
+═══════════════════════════════════════════════════════════
+
+  git init
+  git add .
+  git commit -m "Launch Hooky Golf v1.0"
+  
+  # Create repo at github.com/new
+  git remote add origin https://github.com/YOUR-USERNAME/hooky-golf.git
+  git branch -M main
+  git push -u origin main
+
+═══════════════════════════════════════════════════════════
+  STEP 2: DEPLOY TO NETLIFY (3 min)
+════��══════════════════════════════════════════════════════
+
+  1. Go to netlify.com
+  2. Sign in with GitHub
+  3. "Add new site" → "Import existing project"
+  4. Choose GitHub → Select "hooky-golf" repo
+  5. Click "Deploy site"
+  6. Wait 2-3 minutes
+
+═══════════════════════════════════════════════════════════
+  STEP 3: ADD ENVIRONMENT VARIABLES (2 min)
+═══════════════════════════════════════════════════════════
+
+  In Netlify: Site settings → Environment variables
+  
+  Add these:
+  ✓ SUPABASE_URL
+  ✓ SUPABASE_ANON_KEY
+  ✓ SUPABASE_SERVICE_ROLE_KEY
+  ✓ SUPABASE_DB_URL
+  ✓ GOOGLE_PLACES_API_KEY
+  
+  Then: Deploys → Trigger deploy
+
+═══════════════════════════════════════════════════════════
+  STEP 4: TEST ON MOBILE (3 min)
+═══════════════════════════════════════════════════════════
+
+  📱 iPhone (Safari):
+     1. Open https://your-site-name.netlify.app in Safari
+     2. Tap Share → "Add to Home Screen"
+     3. Open from home screen
+  
+  🤖 Android (Chrome):
+     1. Open https://your-site-name.netlify.app in Chrome
+     2. Tap "Install" prompt or Menu → "Install app"
+     3. Open from home screen
+
+═══════════════════════════════════════════════════════════
+  🎉 YOU'RE LIVE!
+═══════════════════════════════════════════════════════════
+
+  Your URL: https://your-site-name.netlify.app
+  
+  Share with friends:
+  "🏌️ Try Hooky Golf! [your-url] - Install it like an app!"
+
+═══════════════════════════════════════════════════════════
+  📚 NEED MORE DETAILS?
+═══════════════════════════════════════════════════════════
+
+  → DEPLOY_NOW.md ............. Complete deployment guide
+  → LAUNCH_CHECKLIST.md ........ Pre-launch checklist
+  → HOW_TO_INSTALL.md .......... User installation guide
+  → PWA_SETUP.md ............... PWA technical details
+  → APP_STORE_GUIDE.md ......... Future app store submission
+
+═══════════════════════════════════════════════════════════
+  🆘 NEED HELP?
+═══════════════════════════════════════════════════════════
+
+  Build fails?
+  → Check netlify.com/docs
+  → Verify package.json has all dependencies
+  
+  App doesn't load?
+  → Verify environment variables in Netlify
+  → Check browser console (F12) for errors
+  
+  Install not working?
+  → iPhone: Must use Safari
+  → Android: Must use Chrome
+  → Ensure site uses HTTPS
+
+═══════════════════════════════════════════════════════════
+
+  Ready? Start with STEP 1 above! 🚀
+
+═══════════════════════════════════════════════════════════

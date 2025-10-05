@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Hooky Golf - Skip Work, Play Golf</title>
+    <meta name="description" content="Hooky Golf combines golf with playful corporate satire. Sneak past office bosses and complete challenges without getting caught!" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hooky Golf" />
+    <meta name="theme-color" content="#517b34" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    
+    <!-- Simple, reliable font loading -->
+    <style>
+      /* Inline critical CSS for instant font application */
+      * {
+        font-family: 'Geologica', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      
+      h1, h2, h3 {
+        font-family: 'Luckiest Guy', cursive, system-ui, sans-serif !important;
+        font-weight: 400 !important;
+        font-style: normal !important;
+      }
+
+      /* Prevent overscroll bounce on iOS */
+      body {
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
