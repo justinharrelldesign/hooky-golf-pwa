@@ -1,0 +1,72 @@
+========================================
+   PUSH CODE (PUBLIC FOLDER SAFE!)
+========================================
+
+✅ YOUR PUBLIC FOLDER IS NOW PROTECTED!
+
+The .gitignore file now excludes /public folder
+Your PWA icons will NOT be overwritten.
+
+========================================
+   QUICK PUSH COMMANDS
+========================================
+
+# 1. Check what will be pushed
+git status
+
+# 2. Add all changes (public folder auto-ignored)
+git add .
+
+# 3. Commit with message
+git commit -m "Add cost control limits"
+
+# 4. Push to repository
+git push origin main
+
+# 5. Wait for Netlify deploy (2-3 min)
+
+========================================
+   WHAT GETS PUSHED
+========================================
+
+✅ Backend limits (index.tsx)
+✅ Image compression (ImageCropModal.tsx)
+✅ Documentation files
+✅ All other code changes
+
+❌ public/icon-192.png (PROTECTED)
+❌ public/icon-512.png (PROTECTED)
+❌ public/manifest.json (PROTECTED)
+❌ public/sw.js (PROTECTED)
+
+========================================
+   VERIFY AFTER DEPLOY
+========================================
+
+Test these URLs still work:
+https://your-site.netlify.app/icon-192.png
+https://your-site.netlify.app/icon-512.png
+
+========================================
+   TROUBLESHOOTING
+========================================
+
+Icons missing after deploy?
+→ See /SAFE_PUSH_GUIDE.md Section "Troubleshooting"
+
+Want to see full details?
+→ See /SAFE_PUSH_GUIDE.md
+
+========================================
+        READY TO PUSH NOW!
+========================================
+
+Just run these 3 commands:
+
+  git add .
+  git commit -m "Add cost control limits"
+  git push origin main
+
+Done! Your icons are safe. ✅
+
+========================================

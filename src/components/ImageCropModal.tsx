@@ -57,11 +57,22 @@ export function ImageCropModal({ open, imageSrc, onClose, onCropComplete }: Imag
           return;
         }
 
-        // Set canvas size to the cropped area
-        canvas.width = croppedAreaPixels.width;
-        canvas.height = croppedAreaPixels.height;
+        // COST CONTROL: Resize to max 512x512 to reduce file size
+        const maxSize = 512;
+        let targetWidth = croppedAreaPixels.width;
+        let targetHeight = croppedAreaPixels.height;
+        
+        if (targetWidth > maxSize || targetHeight > maxSize) {
+          const scale = maxSize / Math.max(targetWidth, targetHeight);
+          targetWidth = Math.round(targetWidth * scale);
+          targetHeight = Math.round(targetHeight * scale);
+        }
 
-        // Draw the cropped image
+        // Set canvas size to the target size
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        // Draw the cropped and resized image
         ctx.drawImage(
           image,
           croppedAreaPixels.x,
@@ -70,14 +81,29 @@ export function ImageCropModal({ open, imageSrc, onClose, onCropComplete }: Imag
           croppedAreaPixels.height,
           0,
           0,
-          croppedAreaPixels.width,
-          croppedAreaPixels.height
+          targetWidth,
+          targetHeight
         );
 
-        // Convert canvas to blob
-        canvas.toBlob((blob) => {
-          resolve(blob);
-        }, "image/jpeg", 0.95);
+        // Convert canvas to blob with compression
+        // Start with high quality and reduce if needed
+        const compressAndResolve = (quality: number) => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              resolve(null);
+              return;
+            }
+            
+            // If blob is still > 1MB and quality can be reduced, try again
+            if (blob.size > 1048576 && quality > 0.5) {
+              compressAndResolve(quality - 0.1);
+            } else {
+              resolve(blob);
+            }
+          }, "image/jpeg", quality);
+        };
+        
+        compressAndResolve(0.85);
       };
     });
   };
@@ -104,7 +130,7 @@ export function ImageCropModal({ open, imageSrc, onClose, onCropComplete }: Imag
             Crop Your Photo
           </DialogTitle>
           <DialogDescription className="font-['Geologica:Regular',_sans-serif] text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-            Adjust the image to fit perfectly in your profile circle
+            Adjust the image to fit perfectly in your profile circle. Image will be compressed to under 1MB.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,0 +1,40 @@
+========================================
+  HOOKY GOLF - COST CONTROL LIMITS
+========================================
+
+🎯 PURPOSE: Keep you on Supabase FREE tier indefinitely
+
+📊 LIMITS IMPLEMENTED:
+  ✅ 100 rounds per user (oldest auto-deleted)
+  ✅ 50 friends per user (enforced on add)
+  ✅ 1MB profile photos (auto-compressed)
+
+💰 SUPABASE FREE TIER:
+  Database: 500 MB
+  Storage: 1 GB
+  Bandwidth: 2 GB/month
+  Functions: 500K calls/month
+
+📈 YOUR RUNWAY:
+  1,000 users = FREE tier ✅
+  3,000 users = Maybe need Pro ($25/mo)
+  5,000+ users = Definitely need Pro
+  
+  But at 5,000 users, you've made $21,000
+  So $25/month is nothing! 🎉
+
+🔧 TO CHANGE LIMITS:
+  Edit: /supabase/functions/server/index.tsx
+  
+  Lines 7-9:
+    const MAX_ROUNDS_PER_USER = 100;
+    const MAX_FRIENDS_PER_USER = 50;
+    const MAX_PROFILE_PHOTO_SIZE = 1048576;
+
+📚 MORE INFO:
+  /DATA_LIMITS_GUIDE.md - Full documentation
+  /PAID_APP_SUMMARY.md - Overview
+
+========================================
+       YOU'RE ALL SET! 🏌️‍♂️💰
+========================================

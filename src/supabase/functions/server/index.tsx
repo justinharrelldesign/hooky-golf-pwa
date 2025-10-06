@@ -4,6 +4,13 @@ import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import * as kv from "./kv_store.tsx";
 
+// ============================================
+// DATA USAGE LIMITS (Cost Control)
+// ============================================
+const MAX_ROUNDS_PER_USER = 100;        // Keep last 100 rounds only
+const MAX_FRIENDS_PER_USER = 50;        // Max 50 friends per user
+const MAX_PROFILE_PHOTO_SIZE = 1048576; // 1MB max (reduced from 5MB)
+
 // Rank System Constants
 const RANKS = [
   { level: 1, name: "Hooky Rookie", xpRequired: 0, cumulativeXP: 0 },
@@ -89,7 +96,7 @@ const initializeStorage = async () => {
     if (!bucketExists) {
       await supabase.storage.createBucket(bucketName, {
         public: true,
-        fileSizeLimit: 5242880, // 5MB
+        fileSizeLimit: MAX_PROFILE_PHOTO_SIZE, // 1MB (cost control)
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
       });
       console.log(`Storage bucket '${bucketName}' created successfully`);
@@ -308,6 +315,14 @@ app.post("/make-server-15cc1085/save-round", async (c) => {
 
     // Add to rounds array
     rounds.push(newRound);
+    
+    // COST CONTROL: Keep only last MAX_ROUNDS_PER_USER rounds
+    if (rounds.length > MAX_ROUNDS_PER_USER) {
+      // Keep most recent rounds (last MAX_ROUNDS_PER_USER entries)
+      rounds.splice(0, rounds.length - MAX_ROUNDS_PER_USER);
+      console.log(`User ${user.id}: Trimmed round history to ${MAX_ROUNDS_PER_USER} rounds`);
+    }
+    
     await kv.set(`user:${user.id}:rounds`, rounds);
 
     // Update user stats with INDIVIDUAL XP calculation
@@ -394,6 +409,13 @@ app.post("/make-server-15cc1085/save-round", async (c) => {
         
         // Add to friend's rounds array
         friendRounds.push(friendRound);
+        
+        // COST CONTROL: Keep only last MAX_ROUNDS_PER_USER rounds for friend too
+        if (friendRounds.length > MAX_ROUNDS_PER_USER) {
+          friendRounds.splice(0, friendRounds.length - MAX_ROUNDS_PER_USER);
+          console.log(`Friend ${friendId}: Trimmed round history to ${MAX_ROUNDS_PER_USER} rounds`);
+        }
+        
         await kv.set(`user:${friendId}:rounds`, friendRounds);
         
         // Update friend's stats with INDIVIDUAL XP calculation
@@ -734,6 +756,13 @@ app.post("/make-server-15cc1085/add-friend", async (c) => {
     if (friends.includes(friendProfile.userId)) {
       return c.json({ error: "Already friends" }, 400);
     }
+    
+    // COST CONTROL: Check friend limit before adding
+    if (friends.length >= MAX_FRIENDS_PER_USER) {
+      return c.json({ 
+        error: `Friend limit reached. Maximum ${MAX_FRIENDS_PER_USER} friends allowed.` 
+      }, 400);
+    }
 
     // Check if there's already a pending request from this user to friend
     const sentRequests = await kv.get(`user:${user.id}:friend-requests:sent`) || [];
@@ -889,6 +918,23 @@ app.post("/make-server-15cc1085/accept-friend-request", async (c) => {
       return c.json({ error: "Friend request not found" }, 404);
     }
 
+    // Check friend limits before accepting
+    const userFriends = await kv.get(`user:${user.id}:friends`) || [];
+    const senderFriends = await kv.get(`user:${fromUserId}:friends`) || [];
+    
+    // COST CONTROL: Check both users' friend limits
+    if (userFriends.length >= MAX_FRIENDS_PER_USER) {
+      return c.json({ 
+        error: `You have reached the friend limit of ${MAX_FRIENDS_PER_USER} friends.` 
+      }, 400);
+    }
+    
+    if (senderFriends.length >= MAX_FRIENDS_PER_USER) {
+      return c.json({ 
+        error: `That user has reached their friend limit of ${MAX_FRIENDS_PER_USER} friends.` 
+      }, 400);
+    }
+    
     // Remove from received requests
     const updatedReceivedRequests = receivedRequests.filter((req: any) => req.fromUserId !== fromUserId);
     await kv.set(`user:${user.id}:friend-requests:received`, updatedReceivedRequests);
@@ -899,13 +945,11 @@ app.post("/make-server-15cc1085/accept-friend-request", async (c) => {
     await kv.set(`user:${fromUserId}:friend-requests:sent`, updatedSenderSentRequests);
 
     // Add to both friends lists
-    const userFriends = await kv.get(`user:${user.id}:friends`) || [];
     if (!userFriends.includes(fromUserId)) {
       userFriends.push(fromUserId);
       await kv.set(`user:${user.id}:friends`, userFriends);
     }
 
-    const senderFriends = await kv.get(`user:${fromUserId}:friends`) || [];
     if (!senderFriends.includes(user.id)) {
       senderFriends.push(user.id);
       await kv.set(`user:${fromUserId}:friends`, senderFriends);
@@ -1239,9 +1283,9 @@ app.post("/make-server-15cc1085/upload-profile-photo", async (c) => {
       return c.json({ error: "No file provided" }, 400);
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5242880) {
-      return c.json({ error: "File too large. Maximum size is 5MB" }, 400);
+    // COST CONTROL: Validate file size (max 1MB to save storage)
+    if (file.size > MAX_PROFILE_PHOTO_SIZE) {
+      return c.json({ error: "File too large. Maximum size is 1MB. Please crop and compress your photo." }, 400);
     }
 
     // Validate file type
