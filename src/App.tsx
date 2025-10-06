@@ -12,6 +12,7 @@ import { EndRoundSummaryScreen } from "./components/EndRoundSummaryScreen";
 import { RankUpModal } from "./components/RankUpModal";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { ImagePreloader } from "./components/ImagePreloader";
+import { StandaloneModeChecker } from "./components/StandaloneModeChecker";
 import { useImagePreloader } from "./hooks/useImagePreloader";
 import { projectId } from "./utils/supabase/info";
 import { getSupabaseClient } from "./utils/supabase/client";
@@ -683,11 +684,8 @@ export default function App() {
     
     currentUser = null;
     
-    // Force home screen to remount and reload data
-    setHomeScreenKey(prev => prev + 1);
-    
     setGameState({
-      screen: 'home',
+      screen: 'setup',
       difficulty: null,
       currentHole: 1,
       totalHoles: 9,
@@ -807,6 +805,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background" style={{ minHeight: '100vh', minHeight: '100dvh' }}>
+      {/* Standalone Mode Checker - Shows warning on iOS if not installed */}
+      <StandaloneModeChecker />
+      
       {/* Hidden image preloader */}
       <ImagePreloader />
       

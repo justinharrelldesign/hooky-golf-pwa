@@ -1002,7 +1002,7 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }:
               </div>
 
               {/* Round Details */}
-              <div className="flex-1 flex flex-col gap-[4px] min-w-0">
+              <div className="flex-1 flex flex-col gap-[4px] min-w-0 text-left">
                 <p className="font-['Geologica:Bold',_sans-serif] font-bold text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
                   {activeRound.players?.length || 0} player{activeRound.players?.length !== 1 ? 's' : ''}
                 </p>
@@ -1076,7 +1076,7 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }:
                     </div>
 
                     {/* Round Details */}
-                    <div className="flex-1 flex flex-col gap-[4px] min-w-0">
+                    <div className="flex-1 flex flex-col gap-[4px] min-w-0 text-left">
                       <p className="font-['Geologica:Regular',_sans-serif] text-[#282828] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
                         {formattedDate}
                       </p>
@@ -1483,7 +1483,7 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }:
                             )}
                           </div>
 
-                          <div className="flex-1 flex flex-col gap-[4px] min-w-0">
+                          <div className="flex-1 flex flex-col gap-[4px] min-w-0 text-left">
                             <p className="font-['Geologica:Regular',_sans-serif] text-[#282828] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
                               {formattedDate}
                             </p>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Test - Hooky Golf</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #cee7bd;
+            padding: 20px;
+            color: #282828;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #517b34;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .test-item {
+            padding: 16px;
+            margin: 12px 0;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .test-item.pass {
+            background: #dcfce7;
+            border-color: #517b34;
+        }
+        
+        .test-item.fail {
+            background: #fee2e2;
+            border-color: #ef4444;
+        }
+        
+        .label {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .value {
+            font-family: monospace;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .status.pass {
+            background: #517b34;
+            color: white;
+        }
+        
+        .status.fail {
+            background: #ef4444;
+            color: white;
+        }
+        
+        button {
+            background: #517b34;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px 8px 8px 0;
+        }
+        
+        button:hover {
+            background: #456628;
+        }
+        
+        .info {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏌️‍♂️ Hooky Golf PWA Test</h1>
+        
+        <div class="info">
+            <strong>How to use:</strong><br>
+            1. Add this app to your home screen<br>
+            2. Launch from the home screen icon<br>
+            3. Check the results below<br>
+            4. All tests should show "PASS" for proper standalone mode
+        </div>
+        
+        <div id="results"></div>
+        
+        <div style="margin-top: 24px;">
+            <button onclick="runTests()">🔄 Re-run Tests</button>
+            <button onclick="window.location.href='/'">🏠 Go to App</button>
+        </div>
+    </div>
+
+    <script>
+        function runTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+            
+            // Test 1: Standalone Mode
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                window.navigator.standalone === true;
+            addTest('Standalone Mode', isStandalone ? 'RUNNING IN STANDALONE' : 'BROWSER MODE', isStandalone);
+            
+            // Test 2: Display Mode
+            const displayMode = window.matchMedia('(display-mode: standalone)').matches ? 'standalone' :
+                              window.matchMedia('(display-mode: fullscreen)').matches ? 'fullscreen' :
+                              window.matchMedia('(display-mode: minimal-ui)').matches ? 'minimal-ui' : 'browser';
+            addTest('Display Mode', displayMode, displayMode === 'standalone' || displayMode === 'fullscreen');
+            
+            // Test 3: User Agent
+            const ua = navigator.userAgent;
+            const isiOS = /iPad|iPhone|iPod/.test(ua);
+            addTest('Platform', isiOS ? 'iOS Device' : 'Non-iOS Device', true);
+            
+            // Test 4: Service Worker
+            const hasSW = 'serviceWorker' in navigator;
+            addTest('Service Worker Support', hasSW ? 'Supported' : 'Not Supported', hasSW);
+            
+            // Test 5: Navigator Standalone
+            const navStandalone = window.navigator.standalone;
+            addTest('Navigator Standalone', navStandalone === true ? 'YES' : navStandalone === false ? 'NO' : 'UNDEFINED', navStandalone === true);
+            
+            // Test 6: Viewport
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            addTest('Viewport', `${viewportWidth}x${viewportHeight}`, true);
+            
+            // Test 7: Safe Area Insets (iOS)
+            const safeAreaTop = getComputedStyle(document.documentElement).getPropertyValue('padding-top');
+            addTest('Safe Area Insets', safeAreaTop || 'Not Applied', true);
+            
+            // Test 8: Manifest
+            const manifestLink = document.querySelector('link[rel="manifest"]');
+            addTest('Manifest Link', manifestLink ? manifestLink.getAttribute('href') : 'Not Found', !!manifestLink);
+            
+            // Test 9: Apple Mobile Web App Meta
+            const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+            const appleStatus = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+            addTest('Apple PWA Meta Tags', 
+                appleMeta ? `capable=${appleMeta.getAttribute('content')}, status-bar=${appleStatus?.getAttribute('content')}` : 'Not Found',
+                !!appleMeta);
+            
+            // Test 10: Theme Color
+            const themeMeta = document.querySelector('meta[name="theme-color"]');
+            addTest('Theme Color', themeMeta ? themeMeta.getAttribute('content') : 'Not Set', !!themeMeta);
+        }
+        
+        function addTest(label, value, pass) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-item ${pass ? 'pass' : 'fail'}`;
+            div.innerHTML = `
+                <div class="label">
+                    ${label}
+                    <span class="status ${pass ? 'pass' : 'fail'}">${pass ? '✓ PASS' : '✗ FAIL'}</span>
+                </div>
+                <div class="value">${value}</div>
+            `;
+            results.appendChild(div);
+        }
+        
+        // Run tests on load
+        runTests();
+        
+        // Auto-refresh results every 2 seconds
+        setInterval(() => {
+            const standaloneDiv = document.querySelector('.test-item');
+            if (standaloneDiv) {
+                const currentStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                        window.navigator.standalone === true;
+                // Only update if status changed
+                const currentText = standaloneDiv.textContent;
+                const shouldBePass = currentStandalone;
+                const isPass = currentText.includes('✓ PASS');
+                if (shouldBePass !== isPass) {
+                    runTests();
+                }
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
