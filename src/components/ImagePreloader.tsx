@@ -18,14 +18,29 @@ import happyHourHankImg from "figma:asset/ce1a18758397c1af669651b01fcda2ce2f7b03
 import bikeCommuteBrandonImg from "figma:asset/57fce1270342241e056c8e48e2ed078e3b7e0dcb.png";
 import logoImg from "figma:asset/1f93bfd3dadb5b5c5776c200078549369c5b84da.png";
 import bossesCaughtImg from "figma:asset/99fe0dd55feba6e2153c6425f78487a2312d27f9.png";
+import defaultAvatarImg from "figma:asset/6ee3186278c9cc7ba61d44c3a4ce6717ab8d7e8b.png";
+import beerMugImg from "figma:asset/9781b2199d7f32c9bd03c0521544cad1dc8e0a6f.png";
+import hatImg from "figma:asset/2aaac5198899e182e376567f848b1ec80c50d827.png";
+import homeLogoImg from "figma:asset/ed23857f34d6f0a2a5b953c943f636d2775b57ff.png";
+import golfCourseBackgroundImg from "figma:asset/86b080cdcf6fe77baed5e941eb1e5146b772ecec.png";
+import rookieBadgeImg from "figma:asset/1c0dad141c87b516c36d4b1fffa7a1fa6f2ce597.png";
+import amateurBadgeImg from "figma:asset/81eacdab71ec68a0fb838be98711c108f95a6764.png";
+import noviceBadgeImg from "figma:asset/08956f0cc4fccf953ff553805602c0eb12ddc831.png";
+import prodigyBadgeImg from "figma:asset/f74f5f048e39641ac0888bd437f5f75a8045c920.png";
+import expertBadgeImg from "figma:asset/061959b386d8a5784d01c2082709a07ed31c2099.png";
+import legendBadgeImg from "figma:asset/b3b2b989c80a0df3822b4ed43eb2eed4fab0c612.png";
+import heroBadgeImg from "figma:asset/a598caf9369222a527cea4a373bdfd89af4ba6a1.png";
+import godBadgeImg from "figma:asset/fa33a8e840f031f26c729f60f907ea4f391f7c07.png";
+import rankBadgeImg from "figma:asset/8c97451aa7eab202d33fde2be44dda8fa75f62a7.png";
 
 /**
- * ImagePreloader - Preloads all boss images to ensure smooth gameplay
+ * ImagePreloader - Preloads all boss images and UI assets to ensure smooth gameplay
  * Uses hidden img tags to trigger browser preloading
  */
 export function ImagePreloader() {
   return (
     <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      {/* Boss images */}
       <img src={secretarySarahImg} alt="" />
       <img src={deadlineDanImg} alt="" />
       <img src={cubicalChuckImg} alt="" />
@@ -44,8 +59,26 @@ export function ImagePreloader() {
       <img src={wheelieBagWendyImg} alt="" />
       <img src={happyHourHankImg} alt="" />
       <img src={bikeCommuteBrandonImg} alt="" />
+      
+      {/* UI images */}
       <img src={logoImg} alt="" />
+      <img src={homeLogoImg} alt="" />
       <img src={bossesCaughtImg} alt="" />
+      <img src={defaultAvatarImg} alt="" />
+      <img src={beerMugImg} alt="" />
+      <img src={hatImg} alt="" />
+      <img src={golfCourseBackgroundImg} alt="" />
+      
+      {/* Rank badges */}
+      <img src={rookieBadgeImg} alt="" />
+      <img src={amateurBadgeImg} alt="" />
+      <img src={noviceBadgeImg} alt="" />
+      <img src={prodigyBadgeImg} alt="" />
+      <img src={expertBadgeImg} alt="" />
+      <img src={legendBadgeImg} alt="" />
+      <img src={heroBadgeImg} alt="" />
+      <img src={godBadgeImg} alt="" />
+      <img src={rankBadgeImg} alt="" />
     </div>
   );
 }
