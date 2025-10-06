@@ -4,6 +4,7 @@ import svgPaths from "../imports/svg-rn5lzjdsev";
 import svgPathsHome from "../imports/svg-zoxknpw915";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import defaultAvatarImg from "figma:asset/6ee3186278c9cc7ba61d44c3a4ce6717ab8d7e8b.png";
+import imgBossesIllustration from "figma:asset/99fe0dd55feba6e2153c6425f78487a2312d27f9.png";
 
 interface Player {
   id: string;

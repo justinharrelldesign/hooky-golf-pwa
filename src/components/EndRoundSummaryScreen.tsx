@@ -43,6 +43,7 @@ interface EndRoundSummaryScreenProps {
   difficulty?: { name: string; strikes: number };
   totalHoles?: number;
   onPlayAgain: () => void;
+  onReturnHome?: () => void;
 }
 
 function IconOutlineArrowSmRight() {
@@ -77,7 +78,7 @@ function getPlayerInitials(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossResults, bosses, skippedBosses, difficulty, totalHoles, onPlayAgain }: EndRoundSummaryScreenProps) {
+export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossResults, bosses, skippedBosses, difficulty, totalHoles, onPlayAgain, onReturnHome }: EndRoundSummaryScreenProps) {
   const escapedPlayers = players.filter(p => !p.isCaught);
   const caughtPlayers = players.filter(p => p.isCaught);
   
@@ -242,7 +243,7 @@ export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossRe
 
           {/* Return home button */}
           <button
-            onClick={onPlayAgain}
+            onClick={onReturnHome}
             className="box-border content-stretch flex gap-[10px] h-[42px] items-center justify-center overflow-clip px-[24px] py-[10px] relative rounded-[100px] w-full cursor-pointer border border-[#517b34] border-solid transition-all hover:bg-[#f8fafc]"
           >
             <IconOutlineHome />

@@ -725,6 +725,33 @@ export default function App() {
     });
   };
 
+  const handleReturnHomeFromSummary = async () => {
+    // Save round to backend before resetting
+    await saveRoundToBackend();
+    
+    // Reset game and return to home screen
+    currentUser = null;
+    
+    // Force home screen to remount and reload data
+    setHomeScreenKey(prev => prev + 1);
+    
+    setGameState({
+      screen: 'home',
+      difficulty: null,
+      currentHole: 1,
+      totalHoles: 9,
+      players: [],
+      bossResults: [],
+      shuffledBosses: [],
+      gameComplete: false,
+      isVictory: false,
+      failedAtHole: undefined,
+      skipsRemaining: 3,
+      skippedBosses: [],
+      usedChallenges: []
+    });
+  };
+
   const handleExitRound = async () => {
     currentUser = null;
     
@@ -928,6 +955,7 @@ export default function App() {
           difficulty={gameState.difficulty || undefined}
           totalHoles={gameState.totalHoles}
           onPlayAgain={handlePlayAgain}
+          onReturnHome={handleReturnHomeFromSummary}
         />
       )}
 
