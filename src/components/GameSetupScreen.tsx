@@ -100,6 +100,8 @@ function IconSolidInformationCircle() {
 }
 
 export function GameSetupScreen({ onStartGame, onExitToHome, currentUser, accessToken }: GameSetupScreenProps) {
+  console.log('GameSetupScreen received accessToken:', !!accessToken, accessToken ? 'token exists' : 'NO TOKEN');
+  
   const [selectedHoles, setSelectedHoles] = useState(9);
   const [players, setPlayers] = useState<Player[]>([
     { 
@@ -147,11 +149,14 @@ export function GameSetupScreen({ onStartGame, onExitToHome, currentUser, access
   };
 
   const addPlayer = () => {
+    console.log('Add Player clicked - accessToken exists:', !!accessToken);
     if (players.length < 6) {
       // If user is logged in and has access token, show friend selection modal
       if (accessToken) {
+        console.log('Opening friend select modal');
         setShowFriendModal(true);
       } else {
+        console.log('No accessToken - adding manual player instead');
         // If not logged in, just add empty player
         const newId = (Math.max(...players.map(p => parseInt(p.id))) + 1).toString();
         setPlayers([...players, { id: newId, name: "" }]);
@@ -160,6 +165,7 @@ export function GameSetupScreen({ onStartGame, onExitToHome, currentUser, access
   };
 
   const handleSelectFriend = (friend: { userId: string; name: string; profilePhotoUrl?: string }) => {
+    console.log('Selected friend:', { name: friend.name, profilePhotoUrl: friend.profilePhotoUrl, userId: friend.userId });
     if (players.length < 6) {
       const newId = (Math.max(...players.map(p => parseInt(p.id))) + 1).toString();
       setPlayers([...players, { 

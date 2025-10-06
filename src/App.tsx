@@ -362,15 +362,18 @@ export default function App() {
   }, [imagesPreloaded]);
 
   const handleStartGame = async (difficulty: { name: string; strikes: number }, selectedPlayers: { id: string; name: string; avatarUrl?: string; isCurrentUser?: boolean; friendId?: string }[], holes: number, course?: { placeId: string; name: string; address: string } | null) => {
-    const playersWithDifficulty: Player[] = selectedPlayers.map(player => ({
-      ...player,
-      strikes: 0,
-      maxStrikes: difficulty.strikes,
-      isCaught: false,
-      avatarUrl: player.avatarUrl,
-      isCurrentUser: player.isCurrentUser,
-      friendId: player.friendId
-    }));
+    const playersWithDifficulty: Player[] = selectedPlayers.map(player => {
+      console.log('Creating player for game:', { name: player.name, avatarUrl: player.avatarUrl, isCurrentUser: player.isCurrentUser, friendId: player.friendId });
+      return {
+        ...player,
+        strikes: 0,
+        maxStrikes: difficulty.strikes,
+        isCaught: false,
+        avatarUrl: player.avatarUrl,
+        isCurrentUser: player.isCurrentUser,
+        friendId: player.friendId
+      };
+    });
 
     // Set current user for profile header
     currentUser = playersWithDifficulty[0];
@@ -620,7 +623,28 @@ export default function App() {
     }
   };
 
-  const handleStartRound = (userProfile: UserProfile) => {
+  const handleStartRound = async (userProfile: UserProfile) => {
+    // Refresh session to get valid access token before starting round
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session) {
+        console.error("Session refresh error:", error);
+        // Session invalid, log user out
+        await handleLogout();
+        return;
+      }
+      
+      // Update auth state with fresh token
+      setAuthState({
+        accessToken: session.access_token,
+        userId: session.user.id
+      });
+    } catch (error) {
+      console.error("Failed to refresh session:", error);
+    }
+    
     setCurrentUserProfile(userProfile);
     setGameState(prev => ({ ...prev, screen: 'setup' }));
   };

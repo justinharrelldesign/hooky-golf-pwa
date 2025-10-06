@@ -66,6 +66,16 @@ export function FriendSelectModal({ isOpen, onClose, onSelectFriend, onManualEnt
       }
 
       const data = await response.json();
+      console.log('Fetched friends from backend:', data.friends);
+      // Log first friend's data for debugging
+      if (data.friends && data.friends.length > 0) {
+        console.log('First friend details:', {
+          name: data.friends[0].name,
+          userId: data.friends[0].userId,
+          profilePhotoUrl: data.friends[0].profilePhotoUrl,
+          hasProfilePhoto: !!data.friends[0].profilePhotoUrl
+        });
+      }
       setFriends(data.friends || []);
     } catch (err) {
       console.error("Error fetching friends:", err);
@@ -76,6 +86,7 @@ export function FriendSelectModal({ isOpen, onClose, onSelectFriend, onManualEnt
   };
 
   const handleSelectFriend = (friend: Friend) => {
+    console.log('Friend selected in modal:', { name: friend.name, userId: friend.userId, profilePhotoUrl: friend.profilePhotoUrl });
     onSelectFriend(friend);
     onClose();
   };
