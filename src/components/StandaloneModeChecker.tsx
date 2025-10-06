@@ -10,6 +10,7 @@ export function StandaloneModeChecker() {
   const [showDebug, setShowDebug] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isiOS, setIsiOS] = useState(false);
+  const [permanentlyDismissed, setPermanentlyDismissed] = useState(false);
   const [debugInfo, setDebugInfo] = useState({
     displayMode: '',
     navStandalone: '',
@@ -18,6 +19,13 @@ export function StandaloneModeChecker() {
   });
 
   useEffect(() => {
+    // Check if user permanently dismissed the banner
+    const dismissed = localStorage.getItem('pwa-banner-dismissed');
+    if (dismissed === 'true') {
+      setPermanentlyDismissed(true);
+      return;
+    }
+
     // Check if running on iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     setIsiOS(iOS);
@@ -62,8 +70,14 @@ export function StandaloneModeChecker() {
     }
   }, []);
 
-  // Don't show anything if not on iOS or already in standalone
-  if (!showBanner) return null;
+  const handlePermanentDismiss = () => {
+    localStorage.setItem('pwa-banner-dismissed', 'true');
+    setPermanentlyDismissed(true);
+    setShowBanner(false);
+  };
+
+  // Don't show anything if not on iOS or already in standalone or permanently dismissed
+  if (!showBanner || permanentlyDismissed) return null;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[9999] bg-[#f97316] text-white px-4 py-3 shadow-lg">
@@ -86,14 +100,23 @@ export function StandaloneModeChecker() {
           </button>
         </div>
 
-        {/* Debug toggle */}
-        <button
-          onClick={() => setShowDebug(!showDebug)}
-          className="flex items-center gap-2 text-[12px] opacity-75 hover:opacity-100 transition-opacity"
-        >
-          {showDebug ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          <span>Debug Info</span>
-        </button>
+        {/* Action buttons */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowDebug(!showDebug)}
+            className="flex items-center gap-2 text-[12px] opacity-75 hover:opacity-100 transition-opacity"
+          >
+            {showDebug ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <span>Debug Info</span>
+          </button>
+          
+          <button
+            onClick={handlePermanentDismiss}
+            className="text-[12px] opacity-75 hover:opacity-100 transition-opacity underline"
+          >
+            Don't show again
+          </button>
+        </div>
 
         {/* Debug info panel */}
         {showDebug && (
@@ -102,13 +125,19 @@ export function StandaloneModeChecker() {
               <div><span className="opacity-75">Display Mode:</span> {debugInfo.displayMode}</div>
               <div><span className="opacity-75">Nav Standalone:</span> {debugInfo.navStandalone}</div>
               <div><span className="opacity-75">Viewport:</span> {debugInfo.viewport}</div>
+              <div><span className="opacity-75">Screen Height:</span> {window.screen.height}</div>
+              <div><span className="opacity-75">Avail Height:</span> {window.screen.availHeight}</div>
+              <div><span className="opacity-75">Window Height:</span> {window.innerHeight}</div>
               <div className="truncate"><span className="opacity-75">UA:</span> {debugInfo.userAgent}...</div>
             </div>
             <div className="mt-2 pt-2 border-t border-white/20 text-[10px] opacity-75">
               {window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? (
                 <p>⚠️ Running locally - iOS PWA features only work on HTTPS deployment</p>
               ) : (
-                <p>ℹ️ If you see "browser" mode, you're NOT launching from home screen</p>
+                <>
+                  <p className="mb-1">ℹ️ If you see "browser" mode after launching from home screen icon, this is an iOS 18 bug.</p>
+                  <p>✅ The app still works fine - tap "Don't show again" to hide this banner.</p>
+                </>
               )}
             </div>
           </div>
