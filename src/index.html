@@ -25,8 +25,13 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
     
-    <!-- Apple Touch Icons -->
+    <!-- Apple Touch Icons - Multiple sizes for iOS -->
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+    
+    <!-- Preload manifest for faster iOS PWA recognition -->
+    <link rel="preload" href="/manifest.json" as="fetch" crossorigin="anonymous" />
     
     <!-- Simple, reliable font loading -->
     <style>
@@ -50,6 +55,31 @@
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- Critical iOS PWA initialization script - MUST run before React -->
+    <script>
+      // Force iOS to recognize standalone mode immediately
+      (function() {
+        // Log startup info for debugging
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        console.log('[PWA Init] Display mode:', isStandalone ? 'standalone' : 'browser');
+        console.log('[PWA Init] Navigator standalone:', window.navigator.standalone);
+        console.log('[PWA Init] User agent:', navigator.userAgent);
+        
+        // Force manifest load for iOS
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          fetch('/manifest.json')
+            .then(r => r.json())
+            .then(manifest => {
+              console.log('[PWA Init] Manifest loaded:', manifest.name);
+            })
+            .catch(e => {
+              console.error('[PWA Init] Manifest load failed:', e);
+            });
+        }
+      })();
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
