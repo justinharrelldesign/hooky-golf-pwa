@@ -1,7 +1,7 @@
 
-  # Playful Golf App Design (Copy)
+  # Hooky Golf App
 
-  This is a code bundle for Playful Golf App Design (Copy). The original project is available at https://www.figma.com/design/jfiOlpsFVNi7AIYb0KmHDk/Playful-Golf-App-Design--Copy-.
+  This is a code bundle for Hooky Golf App. The original project is available at https://www.figma.com/design/jfiOlpsFVNi7AIYb0KmHDk/Hooky-Golf-App.
 
   ## Running the code
 
