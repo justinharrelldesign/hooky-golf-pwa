@@ -18,6 +18,7 @@ import wheelieBagWendyImg from "figma:asset/192a05458036112f4c6abb6a37675ddaa22e
 import happyHourHankImg from "figma:asset/ce1a18758397c1af669651b01fcda2ce2f7b035d.png";
 import bikeCommuteBrandonImg from "figma:asset/57fce1270342241e056c8e48e2ed078e3b7e0dcb.png";
 import logoImg from "figma:asset/1f93bfd3dadb5b5c5776c200078549369c5b84da.png";
+import bossesCaughtImg from "figma:asset/99fe0dd55feba6e2153c6425f78487a2312d27f9.png";
 
 // List of all boss images to preload
 const bossImages = [
@@ -39,7 +40,8 @@ const bossImages = [
   wheelieBagWendyImg,
   happyHourHankImg,
   bikeCommuteBrandonImg,
-  logoImg
+  logoImg,
+  bossesCaughtImg
 ];
 
 export function useImagePreloader() {
