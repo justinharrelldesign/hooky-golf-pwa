@@ -1,5 +1,5 @@
 // Service Worker for Hooky Golf PWA
-const CACHE_NAME = 'hooky-golf-v1';
+const CACHE_NAME = 'hooky-golf-v4-final-asset-fix-2025';
 const OFFLINE_URL = '/';
 
 // Assets to cache on install

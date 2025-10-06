@@ -4,6 +4,7 @@ import { ConfettiBurst } from "./ConfettiBurst";
 import Frame38 from "../imports/Frame38";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import { calculatePlayerXP } from "../utils/rankSystem";
+import imgRectangle from "figma:asset/9781b2199d7f32c9bd03c0521544cad1dc8e0a6f.png";
 
 interface Player {
   id: string;
