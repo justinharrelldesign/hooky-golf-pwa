@@ -120,16 +120,7 @@ export function TeamProgressScreen({ players, bossResults, bosses, currentHole, 
                   {player.isCurrentUser || player.friendId ? (
                     <div className={`w-[40px] h-[40px] rounded-[100px] overflow-hidden ${player.isCaught === true ? 'bg-[#C43C3C]' : 'bg-[#517b34]'}`}>
                       <Avatar className="w-full h-full">
-                        {player.avatarUrl && (
-                          <AvatarImage 
-                            src={player.avatarUrl} 
-                            alt={player.name}
-                            onError={(e) => {
-                              // Hide broken image on error
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        )}
+                        <AvatarImage src={player.avatarUrl} alt={player.name} />
                         <AvatarFallback className={`${player.isCaught === true ? 'bg-[#C43C3C]' : 'bg-[#517b34]'} text-white text-[16px]`}>
                           {player.name.charAt(0).toUpperCase()}
                         </AvatarFallback>

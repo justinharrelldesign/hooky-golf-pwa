@@ -139,16 +139,7 @@ export function FriendSelectModal({ isOpen, onClose, onSelectFriend, onManualEnt
                   {/* Avatar */}
                   <div className="w-[48px] h-[48px] rounded-full overflow-hidden bg-[#517b34] flex-shrink-0">
                     <Avatar className="w-full h-full">
-                      {friend.profilePhotoUrl && (
-                        <AvatarImage 
-                          src={friend.profilePhotoUrl} 
-                          alt={friend.name}
-                          onError={(e) => {
-                            // Hide broken image on error
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      )}
+                      <AvatarImage src={friend.profilePhotoUrl} alt={friend.name} />
                       <AvatarFallback className="bg-[#517b34] text-white text-[18px]">
                         {friend.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
