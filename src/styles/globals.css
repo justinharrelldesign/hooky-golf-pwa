@@ -139,6 +139,8 @@
   /* PWA Fullscreen support */
   html {
     height: -webkit-fill-available;
+    /* Prevent pull-to-refresh on iOS */
+    overscroll-behavior-y: contain;
   }
 
   body {
@@ -147,11 +149,32 @@
     min-height: 100vh;
     min-height: -webkit-fill-available;
     position: relative;
+    /* iOS PWA fixes */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Allow selection on input fields */
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   #root {
     min-height: 100vh;
     min-height: -webkit-fill-available;
+    position: relative;
+  }
+  
+  /* iOS standalone mode detection and fixes */
+  @media all and (display-mode: standalone) {
+    body {
+      /* Extra padding for iOS notch */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
   }
 
   h1, h2, h3 {
