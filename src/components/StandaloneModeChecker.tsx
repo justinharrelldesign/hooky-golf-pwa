@@ -25,7 +25,22 @@ export function StandaloneModeChecker() {
     // Check if in standalone mode
     const matchesStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const navStandalone = (window.navigator as any).standalone;
-    const standalone = matchesStandalone || navStandalone === true;
+    
+    // iOS 18 workaround: Check if window is running in fullscreen viewport
+    // which indicates it was launched from home screen even if standalone flag is false
+    const isFullViewport = iOS && (
+      window.innerHeight === window.screen.height ||
+      window.innerHeight >= window.screen.height - 100 // Allow for some OS UI
+    );
+    
+    // Also check if Safari UI is hidden (another indicator of home screen launch)
+    const noSafariUI = iOS && (
+      // In true Safari, window.innerHeight is less than screen.availHeight
+      // In PWA mode, they should be close
+      Math.abs(window.innerHeight - window.screen.availHeight) < 100
+    );
+    
+    const standalone = matchesStandalone || navStandalone === true || isFullViewport || noSafariUI;
     
     setIsStandalone(standalone);
 
@@ -38,7 +53,7 @@ export function StandaloneModeChecker() {
       displayMode,
       navStandalone: String(navStandalone),
       userAgent: navigator.userAgent.substring(0, 80),
-      viewport: `${window.innerWidth}x${window.innerHeight}`
+      viewport: `${window.innerWidth}x${window.innerHeight} (screen: ${window.screen.availHeight})`
     });
 
     // Show banner only if on iOS and NOT in standalone mode

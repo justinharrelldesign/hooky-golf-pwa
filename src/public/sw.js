@@ -1,5 +1,5 @@
 // Service Worker for Hooky Golf PWA
-const CACHE_NAME = 'hooky-golf-v7-ios-standalone-final';
+const CACHE_NAME = 'hooky-golf-v8-ios-18-fix';
 const OFFLINE_URL = '/';
 
 // Assets to cache on install

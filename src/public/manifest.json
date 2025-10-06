@@ -9,7 +9,7 @@
   "theme_color": "#517b34",
   "orientation": "portrait-primary",
   "scope": "/",
-  "id": "/?source=pwa",
+  "id": "/",
   "categories": ["games", "sports"],
   "prefer_related_applications": false,
   "dir": "ltr",
