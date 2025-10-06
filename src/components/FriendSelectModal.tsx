@@ -137,11 +137,20 @@ export function FriendSelectModal({ isOpen, onClose, onSelectFriend, onManualEnt
                   className="bg-white rounded-[16px] p-4 flex items-center gap-4 hover:bg-[#f8fafc] transition-colors cursor-pointer border border-[#517b34]/10"
                 >
                   {/* Avatar */}
-                  <div className="w-[48px] h-[48px] rounded-full overflow-hidden bg-[#f97316] flex-shrink-0">
+                  <div className="w-[48px] h-[48px] rounded-full overflow-hidden bg-[#517b34] flex-shrink-0">
                     <Avatar className="w-full h-full">
-                      <AvatarImage src={friend.profilePhotoUrl || defaultAvatarImg} alt={friend.name} />
-                      <AvatarFallback className="bg-transparent">
-                        <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                      {friend.profilePhotoUrl && (
+                        <AvatarImage 
+                          src={friend.profilePhotoUrl} 
+                          alt={friend.name}
+                          onError={(e) => {
+                            // Hide broken image on error
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      )}
+                      <AvatarFallback className="bg-[#517b34] text-white text-[18px]">
+                        {friend.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </div>

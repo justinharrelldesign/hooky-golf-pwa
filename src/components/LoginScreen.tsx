@@ -43,9 +43,9 @@ export function LoginScreen({ onLoginSuccess, onSignupClick }: LoginScreenProps)
   };
 
   return (
-    <div className="bg-[#cee7bd] min-h-screen flex items-center justify-center px-6 py-8" data-name="iPhone 16 Plus - 30">
-      {/* Centered Content Container */}
-      <div className="w-full max-w-[430px] flex flex-col items-center gap-6">
+    <div className="bg-[#cee7bd] min-h-screen flex justify-center px-6 pt-8" data-name="iPhone 16 Plus - 30">
+      {/* Content Container - positioned 32px from top */}
+      <div className="w-full max-w-[430px] flex flex-col items-center gap-6 mt-8">
         
         {/* Logo Image */}
         <div className="relative h-[111px] w-[144px]" data-name="original-3d1cd6004fb64c8f8b609d5ed046d0821 1">

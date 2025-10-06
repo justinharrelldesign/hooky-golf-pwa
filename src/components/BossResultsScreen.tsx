@@ -192,11 +192,20 @@ export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExit
                   {/* Player Info */}
                   <div className="w-full flex items-center h-[40px]">
                     {player.isCurrentUser || player.friendId ? (
-                      <div className={`w-[40px] h-[40px] rounded-[100px] overflow-hidden ${isCaught ? 'bg-[#C43C3C]' : 'bg-[#f97316]'}`}>
+                      <div className={`w-[40px] h-[40px] rounded-[100px] overflow-hidden ${isCaught ? 'bg-[#C43C3C]' : 'bg-[#517b34]'}`}>
                         <Avatar className="w-full h-full">
-                          <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
-                          <AvatarFallback className="bg-transparent">
-                            <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                          {player.avatarUrl && (
+                            <AvatarImage 
+                              src={player.avatarUrl} 
+                              alt={player.name}
+                              onError={(e) => {
+                                // Hide broken image on error
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <AvatarFallback className={`${isCaught ? 'bg-[#C43C3C]' : 'bg-[#517b34]'} text-white text-[16px]`}>
+                            {player.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       </div>

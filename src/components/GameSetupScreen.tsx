@@ -233,9 +233,18 @@ export function GameSetupScreen({ onStartGame, onExitToHome, currentUser, access
         <div key={player.id} className="absolute h-[40px] left-1/2 translate-x-[-50%] w-[382px]" style={{ top: `${181 + (index * 56)}px` }}>
           {/* Avatar - Show avatar for current user and friends, initials for manual players */}
           {player.isCurrentUser || player.friendId ? (
-            <div className="absolute left-0 top-0 w-[40px] h-[40px] rounded-[100px] overflow-hidden bg-[#f97316]">
+            <div className="absolute left-0 top-0 w-[40px] h-[40px] rounded-[100px] overflow-hidden bg-[#517b34]">
               <Avatar className="w-full h-full">
-                <AvatarImage src={player.avatarUrl} alt={player.name} />
+                {player.avatarUrl && (
+                  <AvatarImage 
+                    src={player.avatarUrl} 
+                    alt={player.name}
+                    onError={(e) => {
+                      // Hide broken image on error
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
                 <AvatarFallback className="bg-[#517b34] text-white text-[16px]">
                   {player.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
