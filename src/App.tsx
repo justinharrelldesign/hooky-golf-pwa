@@ -806,7 +806,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background" style={{ minHeight: '100vh', minHeight: '100dvh' }}>
       {/* Hidden image preloader */}
       <ImagePreloader />
       
