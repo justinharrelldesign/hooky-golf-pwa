@@ -194,9 +194,9 @@ export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExit
                     {player.isCurrentUser || player.friendId ? (
                       <div className={`w-[40px] h-[40px] rounded-[100px] overflow-hidden ${isCaught ? 'bg-[#C43C3C]' : 'bg-[#517b34]'}`}>
                         <Avatar className="w-full h-full">
-                          <AvatarImage src={player.avatarUrl} alt={player.name} />
-                          <AvatarFallback className={`${isCaught ? 'bg-[#C43C3C]' : 'bg-[#517b34]'} text-white text-[16px]`}>
-                            {player.name.charAt(0).toUpperCase()}
+                          <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                          <AvatarFallback className="bg-transparent">
+                            <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
                           </AvatarFallback>
                         </Avatar>
                       </div>

@@ -155,7 +155,8 @@ app.post("/make-server-15cc1085/signup", async (c) => {
       roundsWon: 0,
       roundsLost: 0,
       totalStrikes: 0,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      profilePhotoUrl: undefined // Will be set when user uploads a photo
     });
 
     // Initialize empty arrays
@@ -599,6 +600,73 @@ app.get("/make-server-15cc1085/profile", async (c) => {
   } catch (error) {
     console.log(`Get profile error: ${error}`);
     return c.json({ error: "Failed to get profile" }, 500);
+  }
+});
+
+// Upload profile photo
+app.post("/make-server-15cc1085/upload-profile-photo", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const formData = await c.req.formData();
+    const photo = formData.get('photo') as File;
+
+    if (!photo) {
+      return c.json({ error: "No photo provided" }, 400);
+    }
+
+    // Validate file size (max 5MB)
+    if (photo.size > 5242880) {
+      return c.json({ error: "File too large. Maximum size is 5MB" }, 400);
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(photo.type)) {
+      return c.json({ error: "Invalid file type" }, 400);
+    }
+
+    const supabase = createAuthClient();
+    const bucketName = 'make-15cc1085-profile-photos';
+    const fileName = `${user.id}/${Date.now()}-${photo.name}`;
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(fileName, photo, {
+        contentType: photo.type,
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.log(`Upload error: ${uploadError.message}`);
+      return c.json({ error: "Failed to upload photo" }, 500);
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(fileName);
+
+    const photoUrl = urlData.publicUrl;
+
+    // Update user profile with photo URL
+    const profile = await kv.get(`user:${user.id}:profile`);
+    if (profile) {
+      profile.profilePhotoUrl = photoUrl;
+      await kv.set(`user:${user.id}:profile`, profile);
+    }
+
+    return c.json({ 
+      success: true,
+      photoUrl: photoUrl
+    });
+  } catch (error) {
+    console.log(`Upload profile photo error: ${error}`);
+    return c.json({ error: "Failed to upload photo" }, 500);
   }
 });
 

@@ -5,6 +5,7 @@ import Frame38 from "../imports/Frame38";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import { calculatePlayerXP } from "../utils/rankSystem";
 import imgRectangle from "figma:asset/9781b2199d7f32c9bd03c0521544cad1dc8e0a6f.png";
+import defaultAvatarImg from "figma:asset/6ee3186278c9cc7ba61d44c3a4ce6717ab8d7e8b.png";
 
 interface Player {
   id: string;
@@ -138,9 +139,9 @@ export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossRe
                           <ConfettiBurst particleCount={12} />
                           <div className="w-full h-full rounded-[100px] overflow-hidden bg-[#f97316] z-10 relative">
                             <Avatar className="w-full h-full">
-                              <AvatarImage src={player.avatarUrl} alt={player.name} />
-                              <AvatarFallback className="bg-[#517b34] text-white text-[24px]">
-                                {player.name.charAt(0).toUpperCase()}
+                              <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                              <AvatarFallback className="bg-transparent">
+                                <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
                               </AvatarFallback>
                             </Avatar>
                           </div>
@@ -198,9 +199,9 @@ export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossRe
                     {player.isCurrentUser || player.friendId ? (
                       <div className="w-[40px] h-[40px] rounded-[100px] overflow-hidden bg-[#C43C3C]">
                         <Avatar className="w-full h-full">
-                          <AvatarImage src={player.avatarUrl} alt={player.name} />
-                          <AvatarFallback className="bg-[#517b34] text-white text-[16px]">
-                            {player.name.charAt(0).toUpperCase()}
+                          <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                          <AvatarFallback className="bg-transparent">
+                            <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
                           </AvatarFallback>
                         </Avatar>
                       </div>

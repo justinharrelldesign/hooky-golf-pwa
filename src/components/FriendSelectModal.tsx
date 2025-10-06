@@ -66,16 +66,6 @@ export function FriendSelectModal({ isOpen, onClose, onSelectFriend, onManualEnt
       }
 
       const data = await response.json();
-      console.log('Fetched friends from backend:', data.friends);
-      // Log first friend's data for debugging
-      if (data.friends && data.friends.length > 0) {
-        console.log('First friend details:', {
-          name: data.friends[0].name,
-          userId: data.friends[0].userId,
-          profilePhotoUrl: data.friends[0].profilePhotoUrl,
-          hasProfilePhoto: !!data.friends[0].profilePhotoUrl
-        });
-      }
       setFriends(data.friends || []);
     } catch (err) {
       console.error("Error fetching friends:", err);
@@ -86,7 +76,6 @@ export function FriendSelectModal({ isOpen, onClose, onSelectFriend, onManualEnt
   };
 
   const handleSelectFriend = (friend: Friend) => {
-    console.log('Friend selected in modal:', { name: friend.name, userId: friend.userId, profilePhotoUrl: friend.profilePhotoUrl });
     onSelectFriend(friend);
     onClose();
   };
@@ -150,9 +139,9 @@ export function FriendSelectModal({ isOpen, onClose, onSelectFriend, onManualEnt
                   {/* Avatar */}
                   <div className="w-[48px] h-[48px] rounded-full overflow-hidden bg-[#517b34] flex-shrink-0">
                     <Avatar className="w-full h-full">
-                      <AvatarImage src={friend.profilePhotoUrl} alt={friend.name} />
-                      <AvatarFallback className="bg-[#517b34] text-white text-[18px]">
-                        {friend.name.charAt(0).toUpperCase()}
+                      <AvatarImage src={friend.profilePhotoUrl || defaultAvatarImg} alt={friend.name} />
+                      <AvatarFallback className="bg-transparent">
+                        <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
                       </AvatarFallback>
                     </Avatar>
                   </div>

@@ -7,6 +7,7 @@ import { CourseSearchModal } from "./CourseSearchModal";
 import { FriendSelectModal } from "./FriendSelectModal";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import defaultAvatarImg from "figma:asset/6ee3186278c9cc7ba61d44c3a4ce6717ab8d7e8b.png";
 
 interface Player {
   id: string;
@@ -100,8 +101,6 @@ function IconSolidInformationCircle() {
 }
 
 export function GameSetupScreen({ onStartGame, onExitToHome, currentUser, accessToken }: GameSetupScreenProps) {
-  console.log('GameSetupScreen received accessToken:', !!accessToken, accessToken ? 'token exists' : 'NO TOKEN');
-  
   const [selectedHoles, setSelectedHoles] = useState(9);
   const [players, setPlayers] = useState<Player[]>([
     { 
@@ -149,14 +148,11 @@ export function GameSetupScreen({ onStartGame, onExitToHome, currentUser, access
   };
 
   const addPlayer = () => {
-    console.log('Add Player clicked - accessToken exists:', !!accessToken);
     if (players.length < 6) {
       // If user is logged in and has access token, show friend selection modal
       if (accessToken) {
-        console.log('Opening friend select modal');
         setShowFriendModal(true);
       } else {
-        console.log('No accessToken - adding manual player instead');
         // If not logged in, just add empty player
         const newId = (Math.max(...players.map(p => parseInt(p.id))) + 1).toString();
         setPlayers([...players, { id: newId, name: "" }]);
@@ -165,7 +161,6 @@ export function GameSetupScreen({ onStartGame, onExitToHome, currentUser, access
   };
 
   const handleSelectFriend = (friend: { userId: string; name: string; profilePhotoUrl?: string }) => {
-    console.log('Selected friend:', { name: friend.name, profilePhotoUrl: friend.profilePhotoUrl, userId: friend.userId });
     if (players.length < 6) {
       const newId = (Math.max(...players.map(p => parseInt(p.id))) + 1).toString();
       setPlayers([...players, { 
@@ -241,9 +236,9 @@ export function GameSetupScreen({ onStartGame, onExitToHome, currentUser, access
           {player.isCurrentUser || player.friendId ? (
             <div className="absolute left-0 top-0 w-[40px] h-[40px] rounded-[100px] overflow-hidden bg-[#517b34]">
               <Avatar className="w-full h-full">
-                <AvatarImage src={player.avatarUrl} alt={player.name} />
-                <AvatarFallback className="bg-[#517b34] text-white text-[16px]">
-                  {player.name.charAt(0).toUpperCase()}
+                <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                <AvatarFallback className="bg-transparent">
+                  <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
                 </AvatarFallback>
               </Avatar>
             </div>
