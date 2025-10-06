@@ -656,6 +656,43 @@ export default function App() {
     }));
   };
 
+  const clearActiveRound = async () => {
+    try {
+      // Get fresh session token to avoid 401 errors
+      const supabase = getSupabaseClient();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error when clearing active round:", sessionError);
+        return;
+      }
+      
+      if (!session?.access_token) {
+        console.error("No valid session when clearing active round");
+        return;
+      }
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/active-round`,
+        {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to clear active round, status:", response.status, errorText);
+      } else {
+        console.log("Active round cleared successfully");
+      }
+    } catch (error) {
+      console.error("Failed to clear active round:", error);
+    }
+  };
+
   const saveRoundToBackend = async () => {
     try {
       // Get fresh session token
@@ -697,6 +734,9 @@ export default function App() {
           rankName: data.newRankName
         });
       }
+
+      // Clear the in-progress round after saving
+      await clearActiveRound();
     } catch (error) {
       console.error("Failed to save round:", error);
     }
@@ -756,36 +796,7 @@ export default function App() {
     currentUser = null;
     
     // Clear active round from backend BEFORE changing screen
-    try {
-      // Get fresh session token to avoid 401 errors
-      const supabase = getSupabaseClient();
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Session error when clearing active round:", sessionError);
-      } else if (session?.access_token) {
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/active-round`,
-          {
-            method: "DELETE",
-            headers: {
-              "Authorization": `Bearer ${session.access_token}`,
-            },
-          }
-        );
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Failed to clear active round, status:", response.status, errorText);
-        } else {
-          const result = await response.json();
-          console.log("Active round cleared successfully:", result);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to clear active round:", error);
-      // Continue anyway - don't block navigation
-    }
+    await clearActiveRound();
     
     // Small delay to ensure backend state is updated
     await new Promise(resolve => setTimeout(resolve, 100));

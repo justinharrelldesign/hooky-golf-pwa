@@ -1,7 +1,7 @@
 {
-  "name": "Hooky Golf",
+  "name": "Hooky Golf - Skip Work, Play Golf",
   "short_name": "Hooky Golf",
-  "description": "Sneak past office bosses and play hooky golf without getting caught!",
+  "description": "Sneak past office bosses and play hooky golf without getting caught! A hilarious golf game combining corporate satire with real golf challenges.",
   "start_url": "/",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen"],
@@ -10,11 +10,30 @@
   "orientation": "portrait-primary",
   "scope": "/",
   "id": "/",
-  "categories": ["games", "sports"],
+  "categories": ["games", "sports", "entertainment"],
   "prefer_related_applications": false,
   "dir": "ltr",
   "lang": "en",
+  "screenshots": [],
   "icons": [
+    {
+      "src": "/icon-120.png",
+      "sizes": "120x120",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",

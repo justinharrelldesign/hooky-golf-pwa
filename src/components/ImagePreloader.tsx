@@ -33,9 +33,17 @@ import heroBadgeImg from "figma:asset/a598caf9369222a527cea4a373bdfd89af4ba6a1.p
 import godBadgeImg from "figma:asset/fa33a8e840f031f26c729f60f907ea4f391f7c07.png";
 import rankBadgeImg from "figma:asset/8c97451aa7eab202d33fde2be44dda8fa75f62a7.png";
 
+// PWA Icons
+import icon120 from "figma:asset/8a64d62f859f6c0c8f7aeee1faf0fbefb5460f08.png";
+import icon152 from "figma:asset/e54075820b77aabd7ca46d8900b4e990627c6641.png";
+import icon180 from "figma:asset/9b2f7162fcb445faf67bee64bf97d8d5a6222bb9.png";
+import icon192 from "figma:asset/83f3026cb6fc6961d7002cc9205423d2e14dedd4.png";
+import icon512 from "figma:asset/794c0aa997366cb162d2a499bf728514939c0ac3.png";
+
 /**
- * ImagePreloader - Preloads all boss images and UI assets to ensure smooth gameplay
+ * ImagePreloader - Preloads all boss images, UI assets, and PWA icons to ensure smooth gameplay
  * Uses hidden img tags to trigger browser preloading
+ * Total assets: 42 (18 bosses + 7 UI + 8 badges + 5 PWA icons + 4 other)
  */
 export function ImagePreloader() {
   return (
@@ -79,6 +87,13 @@ export function ImagePreloader() {
       <img src={heroBadgeImg} alt="" />
       <img src={godBadgeImg} alt="" />
       <img src={rankBadgeImg} alt="" />
+      
+      {/* PWA Icons - preload for instant appearance */}
+      <img src={icon120} alt="" />
+      <img src={icon152} alt="" />
+      <img src={icon180} alt="" />
+      <img src={icon192} alt="" />
+      <img src={icon512} alt="" />
     </div>
   );
 }

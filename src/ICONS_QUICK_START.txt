@@ -1,0 +1,72 @@
+═══════════════════════════════════════════════════════════════
+  HOOKY GOLF PWA ICONS - QUICK START
+═══════════════════════════════════════════════════════════════
+
+✅ CODE IS READY - Just add icon files to /public!
+✅ YOU HAVE 7 FIGMA ASSETS - Perfect match for all sizes!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 EXPORT THESE 5 FILES FROM YOUR FIGMA ASSETS:
+
+  1. icon-120.png  (120×120)
+     Use: 8a64d62f859f6c0c8f7aeee1faf0fbefb5460f08.png
+  
+  2. icon-152.png  (152×152) 🆕
+     Use: e54075820b77aabd7ca46d8900b4e990627c6641.png
+  
+  3. apple-touch-icon.png  (180×180) ⭐ MOST IMPORTANT
+     Use: 9b2f7162fcb445faf67bee64bf97d8d5a6222bb9.png
+  
+  4. icon-192.png  (192×192)
+     Use: 83f3026cb6fc6961d7002cc9205423d2e14dedd4.png
+  
+  5. icon-512.png  (512×512)
+     Use: 794c0aa997366cb162d2a499bf728514939c0ac3.png
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💾 SAVE TO:  /public/ directory
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎨 DESIGN SPECS:
+
+  • Background: #cee7bd (light green)
+  • Include: Hooky Golf character + text
+  • Format: PNG
+  • Padding: 10-15% on all sides (for maskable)
+  
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 DEPLOY:
+
+  git add public/
+  git commit -m "Add PWA icons"
+  git push
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 TEST:
+
+  iOS:     Share → Add to Home Screen
+  Android: Menu → Install app
+  Desktop: Address bar → Install
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 TIPS:
+
+  • Use your largest Figma asset for 512px and 192px
+  • Use smaller asset for 120px, 152px, 180px
+  • Test on actual devices after deployment
+  • Clear cache if icons don't update
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ READY TO GO!
+
+  Your manifest.json and index.html are already configured.
+  Just export the 5 PNG files and deploy! 🎯
+
+═══════════════════════════════════════════════════════════════
