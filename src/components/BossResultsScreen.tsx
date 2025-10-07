@@ -104,9 +104,11 @@ interface BossResultsScreenProps {
   players: Player[];
   onSubmitResults: (results: PlayerResult[]) => void;
   onExitRound: () => void;
+  currentChallenge?: string;
+  playerCount?: number;
 }
 
-export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExitRound }: BossResultsScreenProps) {
+export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExitRound, currentChallenge, playerCount = 1 }: BossResultsScreenProps) {
   // Only initialize results for players who are not caught
   const [results, setResults] = useState<PlayerResult[]>(
     players.map(player => ({ 
@@ -114,6 +116,15 @@ export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExit
       success: player.isCaught === true ? null : null // Will be set to null for caught players too, but they won't be editable
     }))
   );
+
+  // Get dynamic challenge text for Sweaty Stan based on player count
+  const getChallengeText = () => {
+    if (boss.name === "Sweaty Stan" && currentChallenge === boss.challenge) {
+      const timeLimit = playerCount <= 2 ? "8" : "10";
+      return `Time for you to work up a sweat. Finish the hole in less than ${timeLimit} minutes.`;
+    }
+    return currentChallenge || boss.challenge;
+  };
 
   const getPlayerInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -163,7 +174,7 @@ export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExit
             Challenge
           </p>
           <p className="font-['Geologica:Regular',_sans-serif] font-normal relative shrink-0 text-[18px] w-[350px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-            {boss.challenge}
+            {getChallengeText()}
           </p>
         </div>
         

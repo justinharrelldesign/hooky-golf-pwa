@@ -107,7 +107,7 @@ const alternativeChallenges = [
 interface BossIntroScreenProps {
   hole: number;
   boss: Boss;
-  onContinue: () => void;
+  onContinue: (challenge?: string) => void;
   onExitRound: () => void;
   playerCount?: number;
   skipsRemaining: number;
@@ -317,7 +317,7 @@ export function BossIntroScreen({ hole, boss, onContinue, onExitRound, playerCou
           {/* Face the boss button */}
           <div 
             className="btn-primary box-border content-stretch flex gap-[10px] h-[48px] items-center justify-center overflow-clip px-[39px] py-[12px] relative rounded-[100px] shrink-0 w-[350px] cursor-pointer"
-            onClick={onContinue}
+            onClick={() => onContinue(getChallengeText())}
           >
             <div className="flex flex-col font-['Geologica:Regular',_sans-serif] font-normal justify-end leading-[0] not-italic relative shrink-0 text-[16px] text-nowrap text-white" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
               <p className="leading-[normal] whitespace-pre">Enter results</p>

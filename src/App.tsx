@@ -77,6 +77,7 @@ interface GameState {
   skipsRemaining: number;
   skippedBosses: string[];
   usedChallenges: string[];
+  currentChallenge?: string; // Tracks the current challenge for this hole
   course?: { placeId: string; name: string; address: string };
 }
 
@@ -178,7 +179,7 @@ const bosses: Boss[] = [
   {
     name: "IT Lord Leonard",
     challenge: "Your drive has to be straighter than the train tracks on Leonard's braces.",
-    quote: "Your drive has to be straighter than the train tracks on Leonard's braces.",
+    quote: "Your drives may slice, but your data's straight to my inbox.",
     avatar: itLordLeonardImg,
     backgroundColor: "bg-cyan-400"
   },
@@ -303,7 +304,8 @@ export default function App() {
     isVictory: false,
     skipsRemaining: 3,
     skippedBosses: [],
-    usedChallenges: []
+    usedChallenges: [],
+    currentChallenge: undefined
   });
 
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
@@ -427,11 +429,13 @@ export default function App() {
     });
   };
 
-  const handleBossContinue = () => {
+  const handleBossContinue = (challenge?: string) => {
     // Move from boss intro to results entry screen
+    // Store the challenge that was used (either original or skipped alternative)
     setGameState(prev => ({
       ...prev,
-      screen: 'results'
+      screen: 'results',
+      currentChallenge: challenge
     }));
   };
 
@@ -547,7 +551,8 @@ export default function App() {
       failedAtHole: undefined,
       skipsRemaining: 3,
       skippedBosses: [],
-      usedChallenges: []
+      usedChallenges: [],
+      currentChallenge: undefined
     });
   };
 
@@ -590,11 +595,12 @@ export default function App() {
         isVictory: true
       }));
     } else {
-      // Move to next boss
+      // Move to next boss, reset current challenge
       setGameState(prev => ({
         ...prev,
         currentHole: nextHole,
-        screen: 'boss'
+        screen: 'boss',
+        currentChallenge: undefined
       }));
     }
   };
@@ -761,7 +767,8 @@ export default function App() {
       failedAtHole: undefined,
       skipsRemaining: 3,
       skippedBosses: [],
-      usedChallenges: []
+      usedChallenges: [],
+      currentChallenge: undefined
     });
   };
 
@@ -788,7 +795,8 @@ export default function App() {
       failedAtHole: undefined,
       skipsRemaining: 3,
       skippedBosses: [],
-      usedChallenges: []
+      usedChallenges: [],
+      currentChallenge: undefined
     });
   };
 
@@ -817,7 +825,8 @@ export default function App() {
       failedAtHole: undefined,
       skipsRemaining: 3,
       skippedBosses: [],
-      usedChallenges: []
+      usedChallenges: [],
+      currentChallenge: undefined
     });
   };
 
@@ -930,6 +939,8 @@ export default function App() {
           players={gameState.players}
           onSubmitResults={handleSubmitResults}
           onExitRound={handleExitRound}
+          currentChallenge={gameState.currentChallenge}
+          playerCount={gameState.players.length}
         />
       )}
       
