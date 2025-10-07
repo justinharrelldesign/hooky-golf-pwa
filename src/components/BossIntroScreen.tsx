@@ -17,7 +17,7 @@ import coffeeBreathKarenImg from "figma:asset/0cb85757b9ceba4d82522da1b60933c8a4
 import gumSmackerStaceyImg from "figma:asset/05b9ab854e1d69de46cf06658c5c9365d280d4b2.png";
 import replyAllRebeccaImg from "figma:asset/1d0b13e3e884f69508ae1819b92e7061b4df5a6b.png";
 import lunchBanditBarbImg from "figma:asset/30b9f5a045cd191b57005ecc8177bbdc0ef0d43c.png";
-import hrRandyImg from "figma:asset/36d54dcbf13c11a43b31ff102ad3d5610d314599.png";
+import hrRandyImg from "figma:asset/a52ab0c7395e16ace94356767b3268c4f445778a.png";
 import ibbBrianImg from "figma:asset/257133d885eb6d6f7e93e1e8e829dbac0299c9a6.png";
 import janitorJerryImg from "figma:asset/c2a4d4774071bda822f36da11ba7bac792895c71.png";
 import itLordLeonardImg from "figma:asset/91b6e581832895955629438cad630af81fc8e271.png";
@@ -27,7 +27,14 @@ import awfulOfficeCoupleImg from "figma:asset/42b256c1f0c0fc042cef8d402a041a8fb7
 import smokeBreakSteveImg from "figma:asset/f6c69b0ebd60e291018ba93006b91f2aade891c7.png";
 import wheelieBagWendyImg from "figma:asset/192a05458036112f4c6abb6a37675ddaa22e4cb3.png";
 import happyHourHankImg from "figma:asset/ce1a18758397c1af669651b01fcda2ce2f7b035d.png";
-import bikeCommuteBrandonImg from "figma:asset/57fce1270342241e056c8e48e2ed078e3b7e0dcb.png";
+import bikeCommuteBrandonImg from "figma:asset/2ddfbb9485d0e431853e0dabce9436aa2f41fe73.png";
+import brownNoserBenImg from "figma:asset/78752367d0dbe838c1f6a01ae32865daf8ae8647.png";
+import partyPlannerPennyImg from "figma:asset/4643151d7858a8b250c921a437740aae709bdcc7.png";
+import officeSecuritySeanImg from "figma:asset/49f7d90f9020ebe3b03e56e8ee0ed627beb78d92.png";
+import keyboardClickerKateImg from "figma:asset/6ceffa84acd3c7be09b7a52ddcb52d2b2dc94e15.png";
+import patientZeroPaulieImg from "figma:asset/993ba9f3de295471da367c5a64c21aa9e9f3c424.png";
+import geriatricGertrudeImg from "figma:asset/8467b71d158526d1a2777a99b09ff51a126f7c79.png";
+import rancidLunchRickImg from "figma:asset/4441c4e4832246c4ddf8c3e39f4101fb3eedb41f.png";
 
 // Map boss names to their illustration images
 const bossImageMap: Record<string, string> = {
@@ -49,6 +56,13 @@ const bossImageMap: Record<string, string> = {
   "Wheelie bag Wendy": wheelieBagWendyImg,
   "Happy Hour Hank": happyHourHankImg,
   "Bike commute Brandon": bikeCommuteBrandonImg,
+  "Brown Noser Ben": brownNoserBenImg,
+  "Party Planner Penny": partyPlannerPennyImg,
+  "Office Security Sean": officeSecuritySeanImg,
+  "Keyboard clicker kate": keyboardClickerKateImg,
+  "Patient zero paulie": patientZeroPaulieImg,
+  "Geriatric Gertrude": geriatricGertrudeImg,
+  "Rancid lunch rick": rancidLunchRickImg,
 };
 
 function IconOutlineFlag() {

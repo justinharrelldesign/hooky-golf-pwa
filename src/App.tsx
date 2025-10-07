@@ -24,7 +24,7 @@ import coffeeBreathKarenImg from "figma:asset/0cb85757b9ceba4d82522da1b60933c8a4
 import gumSmackerStaceyImg from "figma:asset/05b9ab854e1d69de46cf06658c5c9365d280d4b2.png";
 import replyAllRebeccaImg from "figma:asset/1d0b13e3e884f69508ae1819b92e7061b4df5a6b.png";
 import lunchBanditBarbImg from "figma:asset/30b9f5a045cd191b57005ecc8177bbdc0ef0d43c.png";
-import hrRandyImg from "figma:asset/36d54dcbf13c11a43b31ff102ad3d5610d314599.png";
+import hrRandyImg from "figma:asset/a52ab0c7395e16ace94356767b3268c4f445778a.png";
 import ibbBrianImg from "figma:asset/257133d885eb6d6f7e93e1e8e829dbac0299c9a6.png";
 import janitorJerryImg from "figma:asset/c2a4d4774071bda822f36da11ba7bac792895c71.png";
 import itLordLeonardImg from "figma:asset/91b6e581832895955629438cad630af81fc8e271.png";
@@ -34,7 +34,14 @@ import awfulOfficeCoupleImg from "figma:asset/42b256c1f0c0fc042cef8d402a041a8fb7
 import smokeBreakSteveImg from "figma:asset/f6c69b0ebd60e291018ba93006b91f2aade891c7.png";
 import wheelieBagWendyImg from "figma:asset/192a05458036112f4c6abb6a37675ddaa22e4cb3.png";
 import happyHourHankImg from "figma:asset/ce1a18758397c1af669651b01fcda2ce2f7b035d.png";
-import bikeCommuteBrandonImg from "figma:asset/57fce1270342241e056c8e48e2ed078e3b7e0dcb.png";
+import bikeCommuteBrandonImg from "figma:asset/2ddfbb9485d0e431853e0dabce9436aa2f41fe73.png";
+import brownNoserBenImg from "figma:asset/78752367d0dbe838c1f6a01ae32865daf8ae8647.png";
+import partyPlannerPennyImg from "figma:asset/4643151d7858a8b250c921a437740aae709bdcc7.png";
+import officeSecuritySeanImg from "figma:asset/49f7d90f9020ebe3b03e56e8ee0ed627beb78d92.png";
+import keyboardClickerKateImg from "figma:asset/6ceffa84acd3c7be09b7a52ddcb52d2b2dc94e15.png";
+import patientZeroPaulieImg from "figma:asset/993ba9f3de295471da367c5a64c21aa9e9f3c424.png";
+import geriatricGertrudeImg from "figma:asset/8467b71d158526d1a2777a99b09ff51a126f7c79.png";
+import rancidLunchRickImg from "figma:asset/4441c4e4832246c4ddf8c3e39f4101fb3eedb41f.png";
 
 interface Boss {
   name: string;
@@ -231,6 +238,55 @@ const bosses: Boss[] = [
     quote: "I'll pedal your ass back to the office faster than I blow out the back of my spandex.",
     avatar: bikeCommuteBrandonImg,
     backgroundColor: "bg-green-400"
+  },
+  {
+    name: "Brown Noser Ben",
+    challenge: "Keep your ball and reputation clean. Any mud balls, and you're in deeper shit than Ben's nose.",
+    quote: "Something stinks of slacking off...",
+    avatar: brownNoserBenImg,
+    backgroundColor: "bg-yellow-600"
+  },
+  {
+    name: "Party Planner Penny",
+    challenge: "Show Penny a real celebration. Shoot birdie or better.",
+    quote: "Golfing during office hours? Don't worry, I'll plan your farewell party for you!",
+    avatar: partyPlannerPennyImg,
+    backgroundColor: "bg-pink-400"
+  },
+  {
+    name: "Office Security Sean",
+    challenge: "Sean runs the lost and found like Fort Knox. Lose a ball and he'll shake you down like a vending machine that ate his dollar.",
+    quote: "You golf, I report. That's the chain of command, chief.",
+    avatar: officeSecuritySeanImg,
+    backgroundColor: "bg-blue-600"
+  },
+  {
+    name: "Keyboard clicker kate",
+    challenge: "Miss a tap-in and Kate is drafting an email with her turd filled nails.",
+    quote: "Click-click-click. the only thing louder than my typing is my pie hole reporting you.",
+    avatar: keyboardClickerKateImg,
+    backgroundColor: "bg-purple-500"
+  },
+  {
+    name: "Patient zero paulie",
+    challenge: "Paulie used your tees to plug his nose. Make par or better this hole without using them.",
+    quote: "just Like my snot filled nose, you can run but you can't hide!",
+    avatar: patientZeroPaulieImg,
+    backgroundColor: "bg-green-500"
+  },
+  {
+    name: "Geriatric Gertrude",
+    challenge: "Gertrude doesn't have much longer. Go long of the green and her last words will be turning you in.",
+    quote: "Don't mind the smell, dear. that's just me decomposing like your job security.",
+    avatar: geriatricGertrudeImg,
+    backgroundColor: "bg-yellow-300"
+  },
+  {
+    name: "Rancid lunch rick",
+    challenge: "No microwave for Rick and no mark for you. 2 putt without marking your ball or Rick is making a mess of your round.",
+    quote: "My lunch may smell of death but so does your career.",
+    avatar: rancidLunchRickImg,
+    backgroundColor: "bg-amber-600"
   }
 ];
 
@@ -256,7 +312,14 @@ const priorityBossNames = [
   "Smoke Break Steve",
   "Wheelie bag Wendy",
   "Happy Hour Hank",
-  "Bike commute Brandon"
+  "Bike commute Brandon",
+  "Brown Noser Ben",
+  "Party Planner Penny",
+  "Office Security Sean",
+  "Keyboard clicker kate",
+  "Patient zero paulie",
+  "Geriatric Gertrude",
+  "Rancid lunch rick"
 ];
 
 // Shuffle function to randomize boss order
