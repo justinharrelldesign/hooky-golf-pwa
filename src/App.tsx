@@ -349,6 +349,7 @@ function arrangeBossesWithPriority(bosses: Boss[]): Boss[] {
 export default function App() {
   const { imagesPreloaded, loadProgress } = useImagePreloader();
   const [showApp, setShowApp] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   
   const [authState, setAuthState] = useState<AuthState>({
     accessToken: null,
@@ -376,7 +377,7 @@ export default function App() {
   const [rankUpInfo, setRankUpInfo] = useState<{ level: number; rankName: string } | null>(null);
   const [homeScreenKey, setHomeScreenKey] = useState(0);
 
-  // Check for existing session on load
+  // Check for existing session on load (happens during image preloading)
   useEffect(() => {
     checkSession();
   }, []);
@@ -392,6 +393,7 @@ export default function App() {
         await supabase.auth.signOut();
         setAuthState({ accessToken: null, userId: null });
         setGameState(prev => ({ ...prev, screen: 'login' }));
+        setSessionChecked(true);
         return;
       }
       
@@ -405,6 +407,7 @@ export default function App() {
         // No session, go to login
         setGameState(prev => ({ ...prev, screen: 'login' }));
       }
+      setSessionChecked(true);
     } catch (error) {
       console.error("Session check error:", error);
       // Clear any invalid session data
@@ -412,19 +415,20 @@ export default function App() {
       await supabase.auth.signOut();
       setAuthState({ accessToken: null, userId: null });
       setGameState(prev => ({ ...prev, screen: 'login' }));
+      setSessionChecked(true);
     }
   };
 
-  // Show app once images are preloaded
+  // Show app only when BOTH images are preloaded AND session is checked
   useEffect(() => {
-    if (imagesPreloaded) {
+    if (imagesPreloaded && sessionChecked) {
       // Small delay to ensure smooth transition
       const timer = setTimeout(() => {
         setShowApp(true);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [imagesPreloaded]);
+  }, [imagesPreloaded, sessionChecked]);
 
   const handleStartGame = async (difficulty: { name: string; strikes: number }, selectedPlayers: { id: string; name: string; avatarUrl?: string; isCurrentUser?: boolean; friendId?: string }[], holes: number, course?: { placeId: string; name: string; address: string } | null) => {
     const playersWithDifficulty: Player[] = selectedPlayers.map(player => {
@@ -910,8 +914,13 @@ export default function App() {
     ? gameState.shuffledBosses[(gameState.currentHole - 1) % gameState.shuffledBosses.length]
     : bosses[0]; // Fallback to first boss if shuffled array is empty
 
-  // Show loading screen while images are preloading
+  // Show loading screen while images are preloading OR session is being checked
   if (!showApp) {
+    // Calculate combined progress: 80% for images, 20% for session check
+    const imageProgress = loadProgress * 0.8;
+    const sessionProgress = sessionChecked ? 20 : 0;
+    const totalProgress = Math.min(100, Math.round(imageProgress + sessionProgress));
+
     return (
       <div className="min-h-screen bg-[#cee7bd] flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-[382px] flex flex-col items-center gap-6">
@@ -925,11 +934,14 @@ export default function App() {
             <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden border border-[#517b34]">
               <div 
                 className="h-full bg-[#517b34] transition-all duration-300 ease-out"
-                style={{ width: `${loadProgress}%` }}
+                style={{ width: `${totalProgress}%` }}
               />
             </div>
             <p className="font-['Geologica:Regular',_sans-serif] text-center text-[#282828] text-[14px] mt-3" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-              Loading assets... {Math.round(loadProgress)}%
+              {!imagesPreloaded && 'Loading assets...'}
+              {imagesPreloaded && !sessionChecked && 'Checking session...'}
+              {imagesPreloaded && sessionChecked && 'Ready!'}
+              {' '}{totalProgress}%
             </p>
           </div>
         </div>
