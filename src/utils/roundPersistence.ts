@@ -29,9 +29,10 @@ export interface PersistedRoundState {
 export function saveRoundState(gameState: any): void {
   try {
     // Only save if we're actually in a round or setup (not on home, login, signup screens)
-    const savableScreens = ['setup', 'boss', 'results', 'caught', 'progress', 'summary'];
+    const savableScreens = ['intro', 'setup', 'boss', 'results', 'caught', 'progress', 'summary'];
     if (!savableScreens.includes(gameState.screen)) {
       // If not in a savable screen, clear any saved state
+      console.log('[Round Persistence] Screen not savable:', gameState.screen, '- clearing state');
       clearRoundState();
       return;
     }
@@ -77,7 +78,13 @@ export function loadRoundState(): PersistedRoundState | null {
     const savedState = localStorage.getItem(ROUND_STATE_KEY);
     const savedTimestamp = localStorage.getItem(ROUND_TIMESTAMP_KEY);
 
+    console.log('[Round Persistence] Loading state from localStorage:', {
+      hasState: !!savedState,
+      hasTimestamp: !!savedTimestamp
+    });
+
     if (!savedState || !savedTimestamp) {
+      console.log('[Round Persistence] No saved state or timestamp found in localStorage');
       return null;
     }
 
@@ -113,9 +120,9 @@ export function loadRoundState(): PersistedRoundState | null {
  */
 export function clearRoundState(): void {
   try {
+    console.log('[Round Persistence] State cleared - called from:', new Error().stack);
     localStorage.removeItem(ROUND_STATE_KEY);
     localStorage.removeItem(ROUND_TIMESTAMP_KEY);
-    console.log('[Round Persistence] State cleared');
   } catch (error) {
     console.error('[Round Persistence] Failed to clear state:', error);
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IntroScreen } from "./components/IntroScreen";
 import { LoginScreen } from "./components/LoginScreen";
 import { SignupScreen } from "./components/SignupScreen";
@@ -352,6 +353,7 @@ export default function App() {
   const [showApp, setShowApp] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [userDataLoaded, setUserDataLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true); // Track if we're still in initial page load
   const [prefetchedData, setPrefetchedData] = useState<{
     profile: any;
     rounds: any[];
@@ -405,6 +407,7 @@ export default function App() {
         setGameState(prev => ({ ...prev, screen: 'login' }));
         setSessionChecked(true);
         setUserDataLoaded(true); // No data to load for logged out users
+        isInitialLoadRef.current = false; // Initial load complete
         return;
       }
       
@@ -413,8 +416,50 @@ export default function App() {
           accessToken: session.access_token,
           userId: session.user.id
         });
-        setGameState(prev => ({ ...prev, screen: 'home' }));
+        
+        // Check for saved round state BEFORE setting any flags
+        const savedState = loadRoundState();
+        console.log('[Auto-Restore] Checking for saved state...', savedState ? `Found: ${savedState.screen}` : 'None found');
+        
+        if (savedState && savedState.screen !== 'home' && savedState.screen !== 'login' && savedState.screen !== 'signup') {
+          console.log('[Auto-Restore] Restoring game state to:', savedState.screen, 'Hole:', savedState.currentHole);
+          
+          // Restore the full game state automatically
+          setGameState({
+            screen: savedState.screen as any,
+            difficulty: savedState.difficulty,
+            currentHole: savedState.currentHole,
+            totalHoles: savedState.totalHoles,
+            players: savedState.players,
+            bossResults: savedState.bossResults,
+            shuffledBosses: savedState.shuffledBosses,
+            gameComplete: savedState.gameComplete,
+            isVictory: savedState.isVictory,
+            failedAtHole: savedState.failedAtHole,
+            skipsRemaining: savedState.skipsRemaining,
+            skippedBosses: savedState.skippedBosses,
+            usedChallenges: savedState.usedChallenges,
+            currentChallenge: savedState.currentChallenge,
+            course: savedState.course
+          });
+
+          // Set current user for profile header
+          if (savedState.players && savedState.players.length > 0) {
+            currentUser = savedState.players[0];
+          }
+        } else {
+          // No saved state, go to home
+          setGameState(prev => ({ ...prev, screen: 'home' }));
+        }
+        
         setSessionChecked(true);
+        
+        // After restore is complete, mark initial load as done
+        // Use setTimeout to ensure React has flushed the state updates
+        setTimeout(() => {
+          isInitialLoadRef.current = false;
+          console.log('[Initial Load] Complete - saving now enabled');
+        }, 250);
         
         // Prefetch user data in parallel with image loading
         await prefetchUserData(session.access_token);
@@ -423,6 +468,7 @@ export default function App() {
         setGameState(prev => ({ ...prev, screen: 'login' }));
         setSessionChecked(true);
         setUserDataLoaded(true); // No data to load for logged out users
+        isInitialLoadRef.current = false; // Initial load complete
       }
     } catch (error) {
       console.error("Session check error:", error);
@@ -433,6 +479,7 @@ export default function App() {
       setGameState(prev => ({ ...prev, screen: 'login' }));
       setSessionChecked(true);
       setUserDataLoaded(true);
+      setInitialLoadComplete(true);
     }
   };
 
@@ -517,42 +564,6 @@ export default function App() {
     }
   };
 
-  // Auto-restore saved round state on page load/refresh (after session is authenticated)
-  useEffect(() => {
-    if (!sessionChecked || !authState.accessToken) {
-      return; // Only restore for authenticated users
-    }
-
-    const savedState = loadRoundState();
-    if (savedState && savedState.screen !== 'home' && savedState.screen !== 'login' && savedState.screen !== 'signup') {
-      console.log('[Auto-Restore] Found saved round state, restoring to:', savedState.screen);
-      
-      // Restore the full game state automatically
-      setGameState({
-        screen: savedState.screen as any,
-        difficulty: savedState.difficulty,
-        currentHole: savedState.currentHole,
-        totalHoles: savedState.totalHoles,
-        players: savedState.players,
-        bossResults: savedState.bossResults,
-        shuffledBosses: savedState.shuffledBosses,
-        gameComplete: savedState.gameComplete,
-        isVictory: savedState.isVictory,
-        failedAtHole: savedState.failedAtHole,
-        skipsRemaining: savedState.skipsRemaining,
-        skippedBosses: savedState.skippedBosses,
-        usedChallenges: savedState.usedChallenges,
-        currentChallenge: savedState.currentChallenge,
-        course: savedState.course
-      });
-
-      // Set current user for profile header
-      if (savedState.players && savedState.players.length > 0) {
-        currentUser = savedState.players[0];
-      }
-    }
-  }, [sessionChecked, authState.accessToken]);
-
   // Show app only when images are loaded, session is checked, AND user data is loaded (if applicable)
   useEffect(() => {
     if (imagesPreloaded && sessionChecked && userDataLoaded) {
@@ -565,7 +576,13 @@ export default function App() {
   }, [imagesPreloaded, sessionChecked, userDataLoaded]);
 
   // Save round state to localStorage whenever gameState changes during a round
+  // BUT only after initial page load is complete to avoid clearing saved state
   useEffect(() => {
+    if (isInitialLoadRef.current) {
+      console.log('[Round Persistence] Skipping save - initial page load in progress');
+      return;
+    }
+    console.log('[Round Persistence] Saving state for screen:', gameState.screen);
     saveRoundState(gameState);
   }, [gameState]);
 
@@ -1204,6 +1221,8 @@ export default function App() {
     );
   }
 
+  console.log('[App Render] Current screen:', gameState.screen, 'Auth:', !!authState.accessToken);
+  
   return (
     <div className="min-h-screen bg-background" style={{ minHeight: '100vh', minHeight: '100dvh' }}>
       {/* Standalone Mode Checker - Shows warning on iOS if not installed */}
