@@ -28,10 +28,10 @@ export interface PersistedRoundState {
  */
 export function saveRoundState(gameState: any): void {
   try {
-    // Only save if we're actually in a round (not on home, login, setup screens)
-    const roundScreens = ['boss', 'results', 'caught', 'progress', 'summary'];
-    if (!roundScreens.includes(gameState.screen)) {
-      // If not in a round screen, clear any saved state
+    // Only save if we're actually in a round or setup (not on home, login, signup screens)
+    const savableScreens = ['setup', 'boss', 'results', 'caught', 'progress', 'summary'];
+    if (!savableScreens.includes(gameState.screen)) {
+      // If not in a savable screen, clear any saved state
       clearRoundState();
       return;
     }

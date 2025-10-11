@@ -18,7 +18,6 @@ import { projectId } from "./utils/supabase/info";
 import { getSupabaseClient } from "./utils/supabase/client";
 import { getProgressToNextRank } from "./utils/rankSystem";
 import { saveRoundState, loadRoundState, clearRoundState } from "./utils/roundPersistence";
-import { saveRoundState, loadRoundState, clearRoundState } from "./utils/roundPersistence";
 import secretarySarahImg from "figma:asset/da606b15aaafe7911ca9e1be31b9011a11616444.png";
 import deadlineDanImg from "figma:asset/639913f4590217518f4a29a4f9cc4bfc94bde609.png";
 import cubicalChuckImg from "figma:asset/88d4ac832cde727bb6ce70e63518f7d9460b6fae.png";
@@ -517,6 +516,42 @@ export default function App() {
       setUserDataLoaded(true); // Continue anyway
     }
   };
+
+  // Auto-restore saved round state on page load/refresh (after session is authenticated)
+  useEffect(() => {
+    if (!sessionChecked || !authState.accessToken) {
+      return; // Only restore for authenticated users
+    }
+
+    const savedState = loadRoundState();
+    if (savedState && savedState.screen !== 'home' && savedState.screen !== 'login' && savedState.screen !== 'signup') {
+      console.log('[Auto-Restore] Found saved round state, restoring to:', savedState.screen);
+      
+      // Restore the full game state automatically
+      setGameState({
+        screen: savedState.screen as any,
+        difficulty: savedState.difficulty,
+        currentHole: savedState.currentHole,
+        totalHoles: savedState.totalHoles,
+        players: savedState.players,
+        bossResults: savedState.bossResults,
+        shuffledBosses: savedState.shuffledBosses,
+        gameComplete: savedState.gameComplete,
+        isVictory: savedState.isVictory,
+        failedAtHole: savedState.failedAtHole,
+        skipsRemaining: savedState.skipsRemaining,
+        skippedBosses: savedState.skippedBosses,
+        usedChallenges: savedState.usedChallenges,
+        currentChallenge: savedState.currentChallenge,
+        course: savedState.course
+      });
+
+      // Set current user for profile header
+      if (savedState.players && savedState.players.length > 0) {
+        currentUser = savedState.players[0];
+      }
+    }
+  }, [sessionChecked, authState.accessToken]);
 
   // Show app only when images are loaded, session is checked, AND user data is loaded (if applicable)
   useEffect(() => {

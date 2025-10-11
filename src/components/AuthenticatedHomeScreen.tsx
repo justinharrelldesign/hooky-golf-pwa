@@ -3,6 +3,8 @@ import { motion } from "motion/react";
 import svgPaths from "../imports/svg-qcm451atz7";
 import svgPathsDetails from "../imports/svg-07jtzyo4w3";
 import { projectId } from "../utils/supabase/info";
+import { hasSavedRound } from "../utils/roundPersistence";
+import { hasSavedRound } from "../utils/roundPersistence";
 import logoImg from "figma:asset/ed23857f34d6f0a2a5b953c943f636d2775b57ff.png";
 import defaultAvatarImg from "figma:asset/6ee3186278c9cc7ba61d44c3a4ce6717ab8d7e8b.png";
 import golfCourseBackgroundImg from "figma:asset/86b080cdcf6fe77baed5e941eb1e5146b772ecec.png";
@@ -974,8 +976,8 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, o
           </motion.div>
         </div>
 
-        {/* Active Round Card (In-Progress) */}
-        {activeRound && (
+        {/* Active Round Card (In-Progress) - show if backend has activeRound OR localStorage has saved round */}
+        {(activeRound || hasSavedRound()) && (
           <motion.div 
             className="box-border content-stretch flex flex-col gap-[16px] p-[24px] rounded-[32px] mb-3 relative"
             style={{ background: 'rgba(206, 231, 189, 0.5)' }}
@@ -992,7 +994,7 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, o
             </div>
 
             {/* Check if current user is the round leader */}
-            {activeRound.leaderId === profile?.userId ? (
+            {(!activeRound || activeRound.leaderId === profile?.userId) ? (
               <button
                 onClick={onResumeRound}
                 className="box-border content-stretch flex gap-[12px] items-center p-[16px] rounded-[16px] relative w-full hover:bg-[#517b34]/10 transition-colors cursor-pointer"
@@ -1011,11 +1013,11 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, o
                     Resume Round
                   </p>
                   <p className="font-['Geologica:Regular',_sans-serif] text-[#517b34] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                    {activeRound.players?.length || 0} player{activeRound.players?.length !== 1 ? 's' : ''} • Hole {activeRound.currentHole || 1}/{activeRound.totalHoles}
+                    {activeRound?.players?.length || 0} player{activeRound?.players?.length !== 1 ? 's' : ''} • Hole {activeRound?.currentHole || 1}/{activeRound?.totalHoles || 9}
                   </p>
-                  {activeRound.course && (
+                  {activeRound?.course && (
                     <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[12px] truncate" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                      {activeRound.course.name}
+                      {activeRound?.course.name}
                     </p>
                   )}
                 </div>
