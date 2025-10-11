@@ -196,6 +196,7 @@ app.post("/make-server-15cc1085/start-round", async (c) => {
     const inProgressRound = {
       id: roundId,
       userId: user.id,
+      leaderId: user.id, // Track who started/is leading the round
       status: 'in-progress',
       difficulty,
       totalHoles,
@@ -246,6 +247,63 @@ app.get("/make-server-15cc1085/active-round", async (c) => {
   } catch (error) {
     console.log(`Get active round error: ${error}`);
     return c.json({ error: "Failed to get active round" }, 500);
+  }
+});
+
+// Update active round progress (during gameplay)
+app.put("/make-server-15cc1085/active-round", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const body = await c.req.json();
+    const { currentHole, players, bossResults, skippedBosses, usedChallenges } = body;
+
+    // Get existing active round
+    const activeRound = await kv.get(`user:${user.id}:active-round`);
+    
+    if (!activeRound) {
+      return c.json({ error: "No active round found" }, 404);
+    }
+
+    // Update with new progress
+    const updatedRound = {
+      ...activeRound,
+      currentHole: currentHole ?? activeRound.currentHole,
+      players: players ?? activeRound.players,
+      bossResults: bossResults ?? activeRound.bossResults,
+      skippedBosses: skippedBosses ?? activeRound.skippedBosses,
+      usedChallenges: usedChallenges ?? activeRound.usedChallenges,
+      lastUpdated: new Date().toISOString()
+    };
+
+    // Save updated round
+    await kv.set(`user:${user.id}:active-round`, updatedRound);
+
+    // Also update for friend participants
+    if (activeRound.players) {
+      const friendPlayers = activeRound.players.filter((p: any) => p.friendId);
+      
+      for (const friendPlayer of friendPlayers) {
+        try {
+          await kv.set(`user:${friendPlayer.friendId}:active-round`, updatedRound);
+          console.log(`Updated active round for friend: ${friendPlayer.friendId}`);
+        } catch (friendError) {
+          console.log(`Failed to update active round for friend ${friendPlayer.friendId}: ${friendError}`);
+        }
+      }
+    }
+
+    return c.json({ 
+      success: true,
+      round: updatedRound,
+      message: "Active round updated successfully" 
+    });
+  } catch (error) {
+    console.log(`Update active round error: ${error}`);
+    return c.json({ error: "Failed to update active round" }, 500);
   }
 });
 

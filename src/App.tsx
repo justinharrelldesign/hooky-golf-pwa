@@ -17,6 +17,8 @@ import { useImagePreloader } from "./hooks/useImagePreloader";
 import { projectId } from "./utils/supabase/info";
 import { getSupabaseClient } from "./utils/supabase/client";
 import { getProgressToNextRank } from "./utils/rankSystem";
+import { saveRoundState, loadRoundState, clearRoundState } from "./utils/roundPersistence";
+import { saveRoundState, loadRoundState, clearRoundState } from "./utils/roundPersistence";
 import secretarySarahImg from "figma:asset/da606b15aaafe7911ca9e1be31b9011a11616444.png";
 import deadlineDanImg from "figma:asset/639913f4590217518f4a29a4f9cc4bfc94bde609.png";
 import cubicalChuckImg from "figma:asset/88d4ac832cde727bb6ce70e63518f7d9460b6fae.png";
@@ -350,6 +352,15 @@ export default function App() {
   const { imagesPreloaded, loadProgress } = useImagePreloader();
   const [showApp, setShowApp] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [userDataLoaded, setUserDataLoaded] = useState(false);
+  const [prefetchedData, setPrefetchedData] = useState<{
+    profile: any;
+    rounds: any[];
+    friends: any[];
+    activeRound: any;
+    incomingRequests: any[];
+    outgoingRequests: any[];
+  } | null>(null);
   
   const [authState, setAuthState] = useState<AuthState>({
     accessToken: null,
@@ -394,6 +405,7 @@ export default function App() {
         setAuthState({ accessToken: null, userId: null });
         setGameState(prev => ({ ...prev, screen: 'login' }));
         setSessionChecked(true);
+        setUserDataLoaded(true); // No data to load for logged out users
         return;
       }
       
@@ -403,11 +415,16 @@ export default function App() {
           userId: session.user.id
         });
         setGameState(prev => ({ ...prev, screen: 'home' }));
+        setSessionChecked(true);
+        
+        // Prefetch user data in parallel with image loading
+        await prefetchUserData(session.access_token);
       } else {
         // No session, go to login
         setGameState(prev => ({ ...prev, screen: 'login' }));
+        setSessionChecked(true);
+        setUserDataLoaded(true); // No data to load for logged out users
       }
-      setSessionChecked(true);
     } catch (error) {
       console.error("Session check error:", error);
       // Clear any invalid session data
@@ -416,19 +433,181 @@ export default function App() {
       setAuthState({ accessToken: null, userId: null });
       setGameState(prev => ({ ...prev, screen: 'login' }));
       setSessionChecked(true);
+      setUserDataLoaded(true);
     }
   };
 
-  // Show app only when BOTH images are preloaded AND session is checked
+  const prefetchUserData = async (accessToken: string) => {
+    try {
+      // Helper to safely parse responses
+      const parseResponse = async (res: Response, endpoint: string, defaultValue: any) => {
+        if (!res.ok) {
+          const text = await res.text();
+          console.error(`[Prefetch] ${endpoint} error (${res.status}):`, text);
+          return defaultValue;
+        }
+        try {
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error(`[Prefetch] ${endpoint} returned non-JSON:`, text);
+            return defaultValue;
+          }
+          return await res.json();
+        } catch (e) {
+          console.error(`[Prefetch] ${endpoint} JSON parse error:`, e);
+          return defaultValue;
+        }
+      };
+
+      // Fetch all data in parallel
+      const [profileRes, roundsRes, friendsRes, activeRoundRes, friendRequestsRes] = await Promise.all([
+        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/profile`, {
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        }).catch(err => {
+          console.error("[Prefetch] profile fetch failed:", err);
+          return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
+        }),
+        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/rounds`, {
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        }).catch(err => {
+          console.error("[Prefetch] rounds fetch failed:", err);
+          return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
+        }),
+        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/friends`, {
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        }).catch(err => {
+          console.error("[Prefetch] friends fetch failed:", err);
+          return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
+        }),
+        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/active-round`, {
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        }).catch(err => {
+          console.error("[Prefetch] active-round fetch failed:", err);
+          return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
+        }),
+        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/friend-requests`, {
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        }).catch(err => {
+          console.error("[Prefetch] friend-requests fetch failed:", err);
+          return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
+        })
+      ]);
+
+      const [profileData, roundsData, friendsData, activeRoundData, friendRequestsData] = await Promise.all([
+        parseResponse(profileRes, "profile", { profile: null }),
+        parseResponse(roundsRes, "rounds", { rounds: [] }),
+        parseResponse(friendsRes, "friends", { friends: [] }),
+        parseResponse(activeRoundRes, "active-round", { round: null }),
+        parseResponse(friendRequestsRes, "friend-requests", { incomingRequests: [], outgoingRequests: [] })
+      ]);
+
+      setPrefetchedData({
+        profile: profileData.profile,
+        rounds: roundsData.rounds || [],
+        friends: friendsData.friends || [],
+        activeRound: activeRoundData.round || null,
+        incomingRequests: friendRequestsData.incomingRequests || [],
+        outgoingRequests: friendRequestsData.outgoingRequests || []
+      });
+
+      setUserDataLoaded(true);
+    } catch (error) {
+      console.error("[Prefetch] Failed to prefetch user data:", error);
+      setUserDataLoaded(true); // Continue anyway
+    }
+  };
+
+  // Show app only when images are loaded, session is checked, AND user data is loaded (if applicable)
   useEffect(() => {
-    if (imagesPreloaded && sessionChecked) {
+    if (imagesPreloaded && sessionChecked && userDataLoaded) {
       // Small delay to ensure smooth transition
       const timer = setTimeout(() => {
         setShowApp(true);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [imagesPreloaded, sessionChecked]);
+  }, [imagesPreloaded, sessionChecked, userDataLoaded]);
+
+  // Save round state to localStorage whenever gameState changes during a round
+  useEffect(() => {
+    saveRoundState(gameState);
+  }, [gameState]);
+
+  // Sync round state to backend periodically during gameplay
+  useEffect(() => {
+    const roundScreens = ['boss', 'results', 'caught', 'progress'];
+    if (!roundScreens.includes(gameState.screen) || !authState.accessToken) {
+      return;
+    }
+
+    // Update backend every 10 seconds during active gameplay
+    const syncInterval = setInterval(async () => {
+      try {
+        const supabase = getSupabaseClient();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (!sessionError && session?.access_token) {
+          await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/active-round`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                currentHole: gameState.currentHole,
+                players: gameState.players,
+                bossResults: gameState.bossResults,
+                skippedBosses: gameState.skippedBosses,
+                usedChallenges: gameState.usedChallenges
+              }),
+            }
+          );
+          console.log('[Round Sync] Backend updated successfully');
+        }
+      } catch (error) {
+        console.error('[Round Sync] Failed to sync to backend:', error);
+      }
+    }, 10000); // Every 10 seconds
+
+    return () => clearInterval(syncInterval);
+  }, [gameState.screen, gameState.currentHole, authState.accessToken]);
+
+  const handleResumeRound = () => {
+    const savedState = loadRoundState();
+    if (!savedState) {
+      console.error('[Resume Round] No saved state found');
+      return;
+    }
+
+    console.log('[Resume Round] Restoring game state from:', savedState.savedAt);
+
+    // Restore the full game state
+    setGameState({
+      screen: savedState.screen,
+      difficulty: savedState.difficulty,
+      currentHole: savedState.currentHole,
+      totalHoles: savedState.totalHoles,
+      players: savedState.players,
+      bossResults: savedState.bossResults,
+      shuffledBosses: savedState.shuffledBosses,
+      gameComplete: savedState.gameComplete,
+      isVictory: savedState.isVictory,
+      failedAtHole: savedState.failedAtHole,
+      skipsRemaining: savedState.skipsRemaining,
+      skippedBosses: savedState.skippedBosses,
+      usedChallenges: savedState.usedChallenges,
+      currentChallenge: savedState.currentChallenge,
+      course: savedState.course
+    });
+
+    // Set current user for profile header
+    if (savedState.players && savedState.players.length > 0) {
+      currentUser = savedState.players[0];
+    }
+  };
 
   const handleStartGame = async (difficulty: { name: string; strikes: number }, selectedPlayers: { id: string; name: string; avatarUrl?: string; isCurrentUser?: boolean; friendId?: string }[], holes: number, course?: { placeId: string; name: string; address: string } | null) => {
     const playersWithDifficulty: Player[] = selectedPlayers.map(player => {
@@ -562,14 +741,17 @@ export default function App() {
         failedAtHole: prev.currentHole
       }));
     } else if (isFinalHole) {
-      // If it's the final hole and not all players are caught, it's a victory
+      // If it's the final hole, check if the CURRENT USER made it through
+      const currentUserPlayer = updatedPlayers.find(p => p.isCurrentUser);
+      const currentUserMadeIt = currentUserPlayer && !currentUserPlayer.isCaught;
+      
       setGameState(prev => ({
         ...prev,
         players: updatedPlayers,
         bossResults: [...prev.bossResults, ...newBossResults],
         screen: 'summary',
         gameComplete: true,
-        isVictory: true
+        isVictory: currentUserMadeIt || false
       }));
     } else if (newlyCaughtPlayers.length > 0) {
       // Show caught screen if any players were just caught
@@ -603,6 +785,9 @@ export default function App() {
     // Save round to backend before resetting
     await saveRoundToBackend();
     
+    // Clear saved round state
+    clearRoundState();
+    
     // Reset game and go to setup screen (when all players caught)
     currentUser = null;
     setGameState({
@@ -627,8 +812,14 @@ export default function App() {
     // Save round to backend before resetting
     await saveRoundToBackend();
     
+    // Clear saved round state
+    clearRoundState();
+    
     // Reset game and return to home screen
     currentUser = null;
+    
+    // Clear prefetched data to force reload
+    setPrefetchedData(null);
     
     // Force home screen to remount and reload data
     setHomeScreenKey(prev => prev + 1);
@@ -655,11 +846,15 @@ export default function App() {
     
     // Check if we've completed all holes (victory condition)
     if (nextHole > gameState.totalHoles) {
+      // Check if the CURRENT USER made it through (not caught)
+      const currentUserPlayer = gameState.players.find(p => p.isCurrentUser);
+      const currentUserMadeIt = currentUserPlayer && !currentUserPlayer.isCaught;
+      
       setGameState(prev => ({
         ...prev,
         screen: 'summary',
         gameComplete: true,
-        isVictory: true
+        isVictory: currentUserMadeIt || false
       }));
     } else {
       // Move to next boss, reset current challenge
@@ -672,9 +867,13 @@ export default function App() {
     }
   };
 
-  const handleLoginSuccess = (accessToken: string, userId: string) => {
+  const handleLoginSuccess = async (accessToken: string, userId: string) => {
     setAuthState({ accessToken, userId });
     setGameState(prev => ({ ...prev, screen: 'home' }));
+    
+    // Prefetch user data after login
+    setUserDataLoaded(false);
+    await prefetchUserData(accessToken);
   };
 
   const handleSignupSuccess = () => {
@@ -687,11 +886,15 @@ export default function App() {
       const supabase = getSupabaseClient();
       await supabase.auth.signOut();
       setAuthState({ accessToken: null, userId: null });
+      setPrefetchedData(null); // Clear prefetched data
+      clearRoundState(); // Clear any saved round state
       setGameState(prev => ({ ...prev, screen: 'login' }));
     } catch (error) {
       console.error("Logout error:", error);
       // Even if logout fails, clear local state
       setAuthState({ accessToken: null, userId: null });
+      setPrefetchedData(null);
+      clearRoundState(); // Clear any saved round state
       setGameState(prev => ({ ...prev, screen: 'login' }));
     }
   };
@@ -819,6 +1022,9 @@ export default function App() {
     // Save round to backend before resetting
     await saveRoundToBackend();
     
+    // Clear saved round state
+    clearRoundState();
+    
     currentUser = null;
     
     setGameState({
@@ -843,8 +1049,14 @@ export default function App() {
     // Save round to backend before resetting
     await saveRoundToBackend();
     
+    // Clear saved round state
+    clearRoundState();
+    
     // Reset game and return to home screen
     currentUser = null;
+    
+    // Clear prefetched data to force reload
+    setPrefetchedData(null);
     
     // Force home screen to remount and reload data
     setHomeScreenKey(prev => prev + 1);
@@ -873,8 +1085,14 @@ export default function App() {
     // Clear active round from backend BEFORE changing screen
     await clearActiveRound();
     
+    // Clear saved round state from localStorage
+    clearRoundState();
+    
     // Small delay to ensure backend state is updated
     await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Clear prefetched data to force reload
+    setPrefetchedData(null);
     
     // Force home screen to remount and reload data
     setHomeScreenKey(prev => prev + 1);
@@ -914,12 +1132,13 @@ export default function App() {
     ? gameState.shuffledBosses[(gameState.currentHole - 1) % gameState.shuffledBosses.length]
     : bosses[0]; // Fallback to first boss if shuffled array is empty
 
-  // Show loading screen while images are preloading OR session is being checked
+  // Show loading screen while images are preloading OR session is being checked OR user data is loading
   if (!showApp) {
-    // Calculate combined progress: 80% for images, 20% for session check
-    const imageProgress = loadProgress * 0.8;
+    // Calculate combined progress: 60% for images, 20% for session check, 20% for user data
+    const imageProgress = loadProgress * 0.6;
     const sessionProgress = sessionChecked ? 20 : 0;
-    const totalProgress = Math.min(100, Math.round(imageProgress + sessionProgress));
+    const dataProgress = userDataLoaded ? 20 : 0;
+    const totalProgress = Math.min(100, Math.round(imageProgress + sessionProgress + dataProgress));
 
     return (
       <div className="min-h-screen bg-[#cee7bd] flex flex-col items-center justify-center px-4">
@@ -938,9 +1157,10 @@ export default function App() {
               />
             </div>
             <p className="font-['Geologica:Regular',_sans-serif] text-center text-[#282828] text-[14px] mt-3" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-              {!imagesPreloaded && 'Loading assets...'}
-              {imagesPreloaded && !sessionChecked && 'Checking session...'}
-              {imagesPreloaded && sessionChecked && 'Ready!'}
+              {totalProgress < 60 && 'Loading game assets...'}
+              {totalProgress >= 60 && totalProgress < 80 && 'Checking authentication...'}
+              {totalProgress >= 80 && totalProgress < 100 && 'Loading your profile...'}
+              {totalProgress >= 100 && 'Ready!'}
               {' '}{totalProgress}%
             </p>
           </div>
@@ -977,6 +1197,8 @@ export default function App() {
           accessToken={authState.accessToken}
           onStartRound={handleStartRound}
           onLogout={handleLogout}
+          onResumeRound={handleResumeRound}
+          prefetchedData={prefetchedData}
         />
       )}
 

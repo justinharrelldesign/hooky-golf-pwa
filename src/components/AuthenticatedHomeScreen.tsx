@@ -66,6 +66,15 @@ interface AuthenticatedHomeScreenProps {
   accessToken: string;
   onStartRound: (userProfile: UserProfile) => void;
   onLogout: () => void;
+  onResumeRound: () => void;
+  prefetchedData?: {
+    profile: any;
+    rounds: any[];
+    friends: any[];
+    activeRound: any;
+    incomingRequests: any[];
+    outgoingRequests: any[];
+  } | null;
 }
 
 function IconOutlineLogout() {
@@ -250,12 +259,13 @@ function HeroiconsOutlineFlagDetails() {
   );
 }
 
-export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }: AuthenticatedHomeScreenProps) {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [rounds, setRounds] = useState<Round[]>([]);
-  const [activeRound, setActiveRound] = useState<any>(null);
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [loading, setLoading] = useState(true);
+export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, onResumeRound, prefetchedData }: AuthenticatedHomeScreenProps) {
+  const [profile, setProfile] = useState<UserProfile | null>(prefetchedData?.profile || null);
+  const [rounds, setRounds] = useState<Round[]>(prefetchedData?.rounds?.slice(0, 3) || []);
+  const [activeRound, setActiveRound] = useState<any>(prefetchedData?.activeRound || null);
+  const [friends, setFriends] = useState<Friend[]>(prefetchedData?.friends || []);
+  const [allRounds, setAllRounds] = useState<Round[]>(prefetchedData?.rounds || []);
+  const [loading, setLoading] = useState(!prefetchedData);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [friendEmail, setFriendEmail] = useState("");
   const [addFriendError, setAddFriendError] = useState("");
@@ -265,7 +275,6 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }:
   const [showCropModal, setShowCropModal] = useState(false);
   const [imageSrc, setImageSrc] = useState("");
   const [showAllRounds, setShowAllRounds] = useState(false);
-  const [allRounds, setAllRounds] = useState<Round[]>([]);
   const [showFriendStats, setShowFriendStats] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [friendStats, setFriendStats] = useState<{
@@ -279,16 +288,19 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }:
   const [selectedRound, setSelectedRound] = useState<Round | null>(null);
   const [roundsSheetView, setRoundsSheetView] = useState<'list' | 'details'>('list'); // Track which view to show in the sheet
   const [showBackToList, setShowBackToList] = useState(false); // Track if back arrow should be shown
-  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
-  const [outgoingRequests, setOutgoingRequests] = useState<any[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<any[]>(prefetchedData?.incomingRequests || []);
+  const [outgoingRequests, setOutgoingRequests] = useState<any[]>(prefetchedData?.outgoingRequests || []);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showActiveRoundDetails, setShowActiveRoundDetails] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, [accessToken]);
+    // Only load data if we don't have prefetched data
+    if (!prefetchedData) {
+      loadData();
+    }
+  }, [accessToken, prefetchedData]);
 
   const loadData = async () => {
     try {
@@ -682,16 +694,6 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }:
     };
   }, [selectedRound, profile, friends]);
 
-  if (loading) {
-    return (
-      <div className="bg-[#cee7bd] min-h-screen flex items-center justify-center">
-        <p className="font-['Geologica:Regular',_sans-serif] text-[#282828] text-[18px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-          Loading...
-        </p>
-      </div>
-    );
-  }
-
   const winRate = profile && profile.totalRounds > 0 
     ? Math.round((profile.roundsWon / profile.totalRounds) * 100) 
     : 0;
@@ -714,7 +716,7 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }:
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#517b34] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="font-['Geologica:Regular',_sans-serif] text-[#282828] text-[16px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-            Loading...
+            Loading profile...
           </p>
         </div>
       </div>
@@ -989,38 +991,66 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout }:
               </div>
             </div>
 
-            <button
-              onClick={() => setShowActiveRoundDetails(true)}
-              className="box-border content-stretch flex gap-[12px] items-center p-[16px] rounded-[16px] relative w-full hover:bg-[#517b34]/10 transition-colors cursor-pointer"
-              style={{ background: 'rgba(81, 123, 52, 0.05)' }}
-            >
-              {/* Play Icon */}
-              <div className="flex items-center justify-center size-[40px] rounded-full shrink-0 bg-[#f97316]">
-                <svg className="size-[24px]" fill="white" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-              </div>
+            {/* Check if current user is the round leader */}
+            {activeRound.leaderId === profile?.userId ? (
+              <button
+                onClick={onResumeRound}
+                className="box-border content-stretch flex gap-[12px] items-center p-[16px] rounded-[16px] relative w-full hover:bg-[#517b34]/10 transition-colors cursor-pointer"
+                style={{ background: 'rgba(81, 123, 52, 0.05)' }}
+              >
+                {/* Play Icon */}
+                <div className="flex items-center justify-center size-[40px] rounded-full shrink-0 bg-[#f97316]">
+                  <svg className="size-[24px]" fill="white" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
 
-              {/* Round Details */}
-              <div className="flex-1 flex flex-col gap-[4px] min-w-0 text-left">
-                <p className="font-['Geologica:Bold',_sans-serif] font-bold text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                  {activeRound.players?.length || 0} player{activeRound.players?.length !== 1 ? 's' : ''}
-                </p>
-                {activeRound.course && (
-                  <p className="font-['Geologica:Regular',_sans-serif] text-[#517b34] text-[12px] truncate" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                    {activeRound.course.name}
+                {/* Round Details */}
+                <div className="flex-1 flex flex-col gap-[4px] min-w-0 text-left">
+                  <p className="font-['Geologica:Bold',_sans-serif] font-bold text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                    Resume Round
                   </p>
-                )}
-                <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                  {activeRound.difficulty?.name} • {activeRound.totalHoles} holes
-                </p>
-              </div>
+                  <p className="font-['Geologica:Regular',_sans-serif] text-[#517b34] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                    {activeRound.players?.length || 0} player{activeRound.players?.length !== 1 ? 's' : ''} • Hole {activeRound.currentHole || 1}/{activeRound.totalHoles}
+                  </p>
+                  {activeRound.course && (
+                    <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[12px] truncate" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                      {activeRound.course.name}
+                    </p>
+                  )}
+                </div>
 
-              {/* Arrow Icon */}
-              <div className="w-[20px] h-[20px] flex-shrink-0" style={{ '--stroke-0': '#517b34' } as React.CSSProperties}>
-                <HeroiconsOutlineArrowRight />
+                {/* Play Icon Arrow */}
+                <div className="w-[20px] h-[20px] flex-shrink-0" style={{ '--stroke-0': '#517b34' } as React.CSSProperties}>
+                  <HeroiconsOutlineArrowRight />
+                </div>
+              </button>
+            ) : (
+              <div 
+                className="box-border content-stretch flex gap-[12px] items-center p-[16px] rounded-[16px] relative w-full"
+                style={{ background: 'rgba(81, 123, 52, 0.05)' }}
+              >
+                {/* Info Icon */}
+                <div className="flex items-center justify-center size-[40px] rounded-full shrink-0 bg-[#517b34]">
+                  <svg className="size-[24px]" fill="white" viewBox="0 0 24 24">
+                    <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+
+                {/* Round Details - Not Leader */}
+                <div className="flex-1 flex flex-col gap-[4px] min-w-0 text-left">
+                  <p className="font-['Geologica:Bold',_sans-serif] font-bold text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                    Invited to Round
+                  </p>
+                  <p className="font-['Geologica:Regular',_sans-serif] text-[#517b34] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                    {activeRound.players?.length || 0} player{activeRound.players?.length !== 1 ? 's' : ''} • Hole {activeRound.currentHole || 1}/{activeRound.totalHoles}
+                  </p>
+                  <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                    Waiting for round leader to finish
+                  </p>
+                </div>
               </div>
-            </button>
+            )}
           </motion.div>
         )}
 
