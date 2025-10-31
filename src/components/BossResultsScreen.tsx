@@ -93,8 +93,22 @@ interface Player {
   friendId?: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  playerIds: string[];
+  strikes?: number;
+  maxStrikes?: number;
+  isCaught?: boolean;
+}
+
 interface PlayerResult {
   playerId: string;
+  success: boolean | null;
+}
+
+interface TeamResult {
+  teamId: string;
   success: boolean | null;
 }
 
@@ -102,18 +116,42 @@ interface BossResultsScreenProps {
   hole: number;
   boss: Boss;
   players: Player[];
-  onSubmitResults: (results: PlayerResult[]) => void;
+  onSubmitResults: (results: PlayerResult[], teamResults?: TeamResult[]) => void;
   onExitRound: () => void;
   currentChallenge?: string;
   playerCount?: number;
+  gameMode?: 'free-for-all' | 'teams';
+  teams?: Team[];
 }
 
-export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExitRound, currentChallenge, playerCount = 1 }: BossResultsScreenProps) {
+function IconOutlineUserGroup() {
+  return (
+    <div className="relative size-full" data-name="Icon/Outline/user-group">
+      <div className="absolute inset-[16.67%_8.33%]" data-name="Icon">
+        <div className="absolute inset-[-6.25%_-5%]">
+          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 22 18">
+            <path d={svgPaths.p33b4a740 || "M1 13c0-1.1.9-2 2-2h4a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-2ZM13 13c0-1.1.9-2 2-2h4a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2ZM7 1a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM17 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"} id="Icon" stroke="var(--stroke-0, #FFFFFF)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExitRound, currentChallenge, playerCount = 1, gameMode = 'free-for-all', teams = [] }: BossResultsScreenProps) {
   // Only initialize results for players who are not caught
   const [results, setResults] = useState<PlayerResult[]>(
     players.map(player => ({ 
       playerId: player.id, 
       success: player.isCaught === true ? null : null // Will be set to null for caught players too, but they won't be editable
+    }))
+  );
+
+  // Initialize team results if in team mode
+  const [teamResults, setTeamResults] = useState<TeamResult[]>(
+    teams.map(team => ({
+      teamId: team.id,
+      success: team.isCaught === true ? null : null
     }))
   );
 
@@ -140,13 +178,29 @@ export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExit
     );
   };
 
-  // Only check if results are set for active players (not caught)
-  const activeResults = results.filter((result, index) => players[index].isCaught !== true);
+  const updateTeamResult = (teamId: string, success: boolean) => {
+    setTeamResults(prev =>
+      prev.map(result =>
+        result.teamId === teamId
+          ? { ...result, success }
+          : result
+      )
+    );
+  };
+
+  const getPlayerById = (playerId: string) => {
+    return players.find(p => p.id === playerId);
+  };
+
+  // Only check if results are set for active players/teams (not caught)
+  const activeResults = gameMode === 'teams'
+    ? teamResults.filter((result, index) => teams[index].isCaught !== true)
+    : results.filter((result, index) => players[index].isCaught !== true);
   const allResultsSet = activeResults.every(result => result.success !== null);
 
   const handleSubmit = () => {
     if (allResultsSet) {
-      onSubmitResults(results);
+      onSubmitResults(results, gameMode === 'teams' ? teamResults : undefined);
     }
   };
 
@@ -180,9 +234,121 @@ export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExit
         
 
 
-        {/* Players List */}
+        {/* Players/Teams List */}
         <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
-          {players.map((player, index) => {
+          {gameMode === 'teams' ? (
+            // Team Mode - Show teams
+            teams.map((team, index) => {
+              const teamResult = teamResults.find(r => r.teamId === team.id);
+              const isSuccess = teamResult?.success === true;
+              const isFail = teamResult?.success === false;
+              const isCaught = team.isCaught === true;
+              const isFirst = index === 0;
+              const needsSeparator = !isFirst;
+              
+              return (
+                <div key={team.id} className="w-full">
+                  {needsSeparator && (
+                    <div className="w-full py-[12px]">
+                      <div className="w-full h-[1px] bg-[#517b34]" />
+                    </div>
+                  )}
+                  
+                  <div className="w-full py-[12px] flex flex-col gap-[16px]">
+                    {/* Team Info */}
+                    <div className="w-full flex flex-col gap-[8px]">
+                      {/* Team Name and Strikes */}
+                      <div className="w-full flex items-center justify-between">
+                        <p className="font-['Geologica:Bold',_sans-serif] font-bold text-[#282828] text-[16px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                          {team.name}
+                        </p>
+                        <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[16px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                          {isCaught ? <span className="text-[#C43C3C]">CAUGHT</span> : `Strikes: ${team.strikes}/${team.maxStrikes}`}
+                        </p>
+                      </div>
+                      
+                      {/* Team Members */}
+                      <div className="flex flex-col gap-[4px]">
+                        {team.playerIds.map((playerId) => {
+                          const player = getPlayerById(playerId);
+                          if (!player) return null;
+                          
+                          return (
+                            <div key={playerId} className="flex items-center">
+                              {/* Small member avatar */}
+                              {player.isCurrentUser || player.friendId ? (
+                                <div className="w-[20px] h-[20px] rounded-[100px] overflow-hidden bg-[#517b34] mr-[8px]">
+                                  <Avatar className="w-full h-full">
+                                    <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                    <AvatarFallback className="bg-transparent">
+                                      <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </div>
+                              ) : (
+                                <div className="bg-[#517b34] box-border content-stretch flex flex-col gap-[10px] items-center justify-center overflow-clip px-[4px] py-[2px] relative rounded-[100px] shrink-0 w-[20px] h-[20px] mr-[8px]">
+                                  <p className="font-['Geologica:Bold',_sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[8px] text-white w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                    {getPlayerInitials(player.name)}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                {player.name}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    {/* Success/Failure Buttons - Only show for active teams */}
+                    {!isCaught && (
+                      <div className="w-full flex gap-[16px]">
+                        {/* Success Button */}
+                        <div 
+                          className={`basis-0 grow h-[48px] min-h-px min-w-px relative rounded-[100px] shrink-0 cursor-pointer ${isSuccess ? 'btn-primary' : ''}`}
+                          onClick={() => updateTeamResult(team.id, true)}
+                        >
+                          <div className="flex flex-row items-center justify-center overflow-clip relative size-full">
+                            <div className="box-border content-stretch flex gap-[10px] h-[48px] items-center justify-center px-[39px] py-[12px] relative w-full">
+                              <div className="overflow-clip relative shrink-0 size-[24px]" data-name="Icon/Outline/check-circle">
+                                <IconOutlineCheckCircle isSelected={isSuccess} />
+                              </div>
+                              <div className={`flex flex-col font-['Geologica:Regular',_sans-serif] font-normal justify-end leading-[0] not-italic relative shrink-0 text-[16px] text-nowrap ${isSuccess ? 'text-white' : 'text-[#517b34]'}`} style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                <p className="leading-[normal] whitespace-pre">Success</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div aria-hidden="true" className="absolute border border-[#517b34] border-solid inset-0 pointer-events-none rounded-[100px]" />
+                        </div>
+                        
+                        {/* Failure Button */}
+                        <div 
+                          className={`basis-0 grow h-[48px] min-h-px min-w-px relative rounded-[100px] shrink-0 cursor-pointer ${isFail ? 'btn-danger' : ''}`}
+                          onClick={() => updateTeamResult(team.id, false)}
+                        >
+                          <div className="flex flex-row items-center justify-center overflow-clip relative size-full">
+                            <div className="box-border content-stretch flex gap-[10px] h-[48px] items-center justify-center px-[39px] py-[12px] relative w-full">
+                              <div className="overflow-clip relative shrink-0 size-[24px]" data-name="Icon/Outline/x-circle">
+                                <IconOutlineXCircle isSelected={isFail} />
+                              </div>
+                              <div className={`flex flex-col font-['Geologica:Regular',_sans-serif] font-normal justify-end leading-[0] not-italic relative shrink-0 text-[16px] text-nowrap ${isFail ? 'text-white' : 'text-[#c43c3c]'}`} style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                <p className="leading-[normal] whitespace-pre">Failure</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div aria-hidden="true" className="absolute border border-[#c43c3c] border-solid inset-0 pointer-events-none rounded-[100px]" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            // Free-for-all Mode - Show individual players
+            players.map((player, index) => {
             const playerResult = results.find(r => r.playerId === player.id);
             const isSuccess = playerResult?.success === true;
             const isFail = playerResult?.success === false;
@@ -271,7 +437,8 @@ export function BossResultsScreen({ hole, boss, players, onSubmitResults, onExit
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
         
         {/* Continue Button */}

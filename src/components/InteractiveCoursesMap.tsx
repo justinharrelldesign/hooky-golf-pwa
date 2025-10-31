@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
-import { projectId } from "../utils/supabase/info";
+import { projectId, publicAnonKey } from "../utils/supabase/info";
 
 interface CourseLocation {
   placeId: string;
@@ -15,7 +15,6 @@ interface InteractiveCoursesMapProps {
   courseLocations: CourseLocation[];
   onCourseSelect: (course: CourseLocation | null) => void;
   selectedCourse: CourseLocation | null;
-  accessToken: string;
 }
 
 declare global {
@@ -28,8 +27,7 @@ declare global {
 export function InteractiveCoursesMap({ 
   courseLocations, 
   onCourseSelect,
-  selectedCourse,
-  accessToken 
+  selectedCourse
 }: InteractiveCoursesMapProps) {
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -50,7 +48,7 @@ export function InteractiveCoursesMap({
         
         const response = await fetch(url, {
           headers: {
-            Authorization: `Bearer ${accessToken}`
+            Authorization: `Bearer ${publicAnonKey}`
           }
         });
         
@@ -79,7 +77,7 @@ export function InteractiveCoursesMap({
     };
 
     fetchApiKey();
-  }, [accessToken]);
+  }, []);
 
   // Load Google Maps script
   useEffect(() => {

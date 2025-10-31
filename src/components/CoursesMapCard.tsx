@@ -30,7 +30,6 @@ interface CourseLocation {
 
 interface CoursesMapCardProps {
   rounds: Round[];
-  accessToken: string;
 }
 
 interface MapConfig {
@@ -41,7 +40,7 @@ interface MapConfig {
   height: number;
 }
 
-export function CoursesMapCard({ rounds, accessToken }: CoursesMapCardProps) {
+export function CoursesMapCard({ rounds }: CoursesMapCardProps) {
   const [courseLocations, setCourseLocations] = useState<CourseLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCourse, setSelectedCourse] = useState<CourseLocation | null>(null);
@@ -83,17 +82,26 @@ export function CoursesMapCard({ rounds, accessToken }: CoursesMapCardProps) {
     
     for (const [placeId, data] of courseMap.entries()) {
       try {
+        // Add timeout to fetch call - increased to 30 seconds to accommodate slow Google Places API
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/get-course-location?placeId=${encodeURIComponent(placeId)}`,
           {
             headers: {
-              Authorization: `Bearer ${accessToken}`,
+              Authorization: `Bearer ${publicAnonKey}`,
             },
+            signal: controller.signal
           }
         );
+        
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
-          console.error(`Failed to fetch location for ${data.course.name}: HTTP ${response.status}`);
+          const errorText = await response.text().catch(() => 'Unknown error');
+          console.warn(`[CoursesMapCard] Could not fetch location for ${data.course.name}: HTTP ${response.status} - ${errorText}`);
+          // Skip this course but don't log as error since it won't block rendering
           continue;
         }
 
@@ -109,11 +117,15 @@ export function CoursesMapCard({ rounds, accessToken }: CoursesMapCardProps) {
             losses: data.losses
           });
         } else if (result.error) {
-          console.error(`Failed to get location for ${data.course.name}: ${result.error}`);
+          console.warn(`[CoursesMapCard] Could not get location for ${data.course.name}: ${result.error}`);
         }
       } catch (error) {
-        console.error(`Failed to fetch location for ${data.course.name}:`, error);
-        // Continue with other courses even if one fails
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log(`[CoursesMapCard] Timeout fetching location for ${data.course.name} - skipping (this is normal for slow API responses)`);
+        } else {
+          console.log(`[CoursesMapCard] Failed to fetch location for ${data.course.name}:`, error);
+        }
+        // Continue with other courses even if one fails - this is expected behavior
       }
     }
 
@@ -158,7 +170,6 @@ export function CoursesMapCard({ rounds, accessToken }: CoursesMapCardProps) {
             courseLocations={courseLocations}
             onCourseSelect={setSelectedCourse}
             selectedCourse={selectedCourse}
-            accessToken={accessToken}
           />
         )}
       </div>

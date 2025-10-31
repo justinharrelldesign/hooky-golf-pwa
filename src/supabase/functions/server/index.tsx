@@ -169,6 +169,7 @@ app.post("/make-server-15cc1085/signup", async (c) => {
     // Initialize empty arrays
     await kv.set(`user:${data.user.id}:rounds`, []);
     await kv.set(`user:${data.user.id}:friends`, []);
+    await kv.set(`user:${data.user.id}:galleryIds`, []);
 
     return c.json({ 
       user: data.user,
@@ -351,7 +352,7 @@ app.post("/make-server-15cc1085/save-round", async (c) => {
     }
 
     const body = await c.req.json();
-    const { isVictory, difficulty, totalHoles, players, bossResults, completedAt, course, skippedBosses = [] } = body;
+    const { isVictory, difficulty, totalHoles, players, bossResults, completedAt, course, skippedBosses = [], gameMode, teams, teamBossResults } = body;
 
     // Get user's existing rounds
     const rounds = await kv.get(`user:${user.id}:rounds`) || [];
@@ -368,7 +369,10 @@ app.post("/make-server-15cc1085/save-round", async (c) => {
       bossResults,
       completedAt: completedAt || new Date().toISOString(),
       course: course || null,
-      skippedBosses
+      skippedBosses,
+      gameMode: gameMode || 'free-for-all',
+      teams: teams || [],
+      teamBossResults: teamBossResults || []
     };
 
     // Add to rounds array
@@ -643,18 +647,33 @@ app.get("/make-server-15cc1085/search-courses", async (c) => {
 // Get user's round history
 app.get("/make-server-15cc1085/rounds", async (c) => {
   try {
+    console.log('[Rounds endpoint] Starting rounds fetch');
     const user = await getUserFromToken(c.req.header('Authorization'));
     if (!user) {
+      console.log('[Rounds endpoint] Unauthorized - no user');
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const rounds = await kv.get(`user:${user.id}:rounds`) || [];
+    console.log(`[Rounds endpoint] Fetching rounds for user: ${user.id}`);
+    
+    // Add timeout to the KV get operation
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('KV get timeout')), 8000)
+    );
+    
+    const roundsPromise = kv.get(`user:${user.id}:rounds`);
+    
+    const roundsData = await Promise.race([roundsPromise, timeoutPromise]);
+    const rounds = Array.isArray(roundsData) ? roundsData : [];
+    
+    console.log(`[Rounds endpoint] Found ${rounds.length} rounds`);
     
     // Return most recent rounds first
     const sortedRounds = rounds.sort((a: any, b: any) => 
       new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
     );
 
+    console.log('[Rounds endpoint] Rounds sorted, returning response');
     return c.json({ rounds: sortedRounds });
   } catch (error) {
     console.log(`Get rounds error: ${error}`);
@@ -665,21 +684,68 @@ app.get("/make-server-15cc1085/rounds", async (c) => {
 // Get user profile and stats
 app.get("/make-server-15cc1085/profile", async (c) => {
   try {
+    console.log('[Profile endpoint] Starting profile fetch');
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      console.log('[Profile endpoint] Unauthorized - no user');
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    console.log(`[Profile endpoint] Fetching profile for user: ${user.id}`);
+    
+    // Add timeout to the KV get operation
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('KV get timeout')), 3000)
+    );
+    
+    const profilePromise = kv.get(`user:${user.id}:profile`);
+    const profile = await Promise.race([profilePromise, timeoutPromise]);
+    
+    if (!profile) {
+      console.log('[Profile endpoint] Profile not found');
+      return c.json({ error: "Profile not found" }, 404);
+    }
+
+    console.log('[Profile endpoint] Profile found, returning response');
+    return c.json({ profile });
+  } catch (error) {
+    console.log(`Get profile error: ${error}`);
+    return c.json({ error: "Failed to get profile" }, 500);
+  }
+});
+
+// Get another user's public profile by userId (for gallery member avatars, friend lists, etc.)
+app.get("/make-server-15cc1085/profile/:userId", async (c) => {
+  try {
     const user = await getUserFromToken(c.req.header('Authorization'));
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const profile = await kv.get(`user:${user.id}:profile`);
+    const targetUserId = c.req.param('userId');
+    if (!targetUserId) {
+      return c.json({ error: "User ID required" }, 400);
+    }
+
+    const profile = await kv.get(`user:${targetUserId}:profile`);
     
     if (!profile) {
       return c.json({ error: "Profile not found" }, 404);
     }
 
-    return c.json({ profile });
+    // Return only public profile information (not private data like email)
+    const publicProfile = {
+      userId: profile.userId,
+      name: profile.name,
+      profilePhotoUrl: profile.profilePhotoUrl,
+      level: profile.level,
+      xp: profile.xp
+    };
+
+    return c.json({ profile: publicProfile });
   } catch (error) {
-    console.log(`Get profile error: ${error}`);
-    return c.json({ error: "Failed to get profile" }, 500);
+    console.log(`Get user profile error: ${error}`);
+    return c.json({ error: "Failed to get user profile" }, 500);
   }
 });
 
@@ -753,21 +819,46 @@ app.post("/make-server-15cc1085/upload-profile-photo", async (c) => {
 // Get friends list
 app.get("/make-server-15cc1085/friends", async (c) => {
   try {
+    console.log('[Friends endpoint] Starting friends fetch');
     const user = await getUserFromToken(c.req.header('Authorization'));
     if (!user) {
+      console.log('[Friends endpoint] Unauthorized - no user');
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const friendIds = await kv.get(`user:${user.id}:friends`) || [];
+    console.log(`[Friends endpoint] Fetching friends for user: ${user.id}`);
     
-    // Get profile data for each friend
+    // Add timeout to the KV get operation
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('KV get timeout')), 3000)
+    );
+    
+    const friendIdsPromise = kv.get(`user:${user.id}:friends`);
+    const friendIdsData = await Promise.race([friendIdsPromise, timeoutPromise]);
+    const friendIds = friendIdsData || [];
+    
+    console.log(`[Friends endpoint] Found ${friendIds.length} friend IDs`);
+    
+    // Get profile data for each friend with timeout
     const friends = await Promise.all(
       friendIds.map(async (friendId: string) => {
-        const profile = await kv.get(`user:${friendId}:profile`);
-        return profile;
+        const profileTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Friend profile timeout')), 2000)
+        );
+        try {
+          const profile = await Promise.race([
+            kv.get(`user:${friendId}:profile`),
+            profileTimeout
+          ]);
+          return profile;
+        } catch (err) {
+          console.log(`[Friends endpoint] Error fetching profile for friend ${friendId}: ${err}`);
+          return null;
+        }
       })
     );
 
+    console.log('[Friends endpoint] Friends fetched, returning response');
     return c.json({ friends: friends.filter(f => f !== null) });
   } catch (error) {
     console.log(`Get friends error: ${error}`);
@@ -912,39 +1003,63 @@ app.get("/make-server-15cc1085/friend-requests", async (c) => {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const receivedRequests = await kv.get(`user:${user.id}:friend-requests:received`) || [];
-    const sentRequests = await kv.get(`user:${user.id}:friend-requests:sent`) || [];
+    // Fetch both request lists in parallel
+    const [receivedRequests, sentRequests] = await Promise.all([
+      kv.get(`user:${user.id}:friend-requests:received`),
+      kv.get(`user:${user.id}:friend-requests:sent`)
+    ]);
     
-    // Enrich sent requests with current recipient data if missing
+    // Return early if no sent requests to enrich
+    if (!sentRequests || sentRequests.length === 0) {
+      return c.json({ 
+        incomingRequests: receivedRequests || [],
+        outgoingRequests: []
+      });
+    }
+    
+    // Enrich sent requests with current recipient data if missing - with timeout per request
     const enrichedSentRequests = await Promise.all(
       sentRequests.map(async (req: any) => {
-        // If request already has recipient info, return as-is
+        // If request already has recipient info, return as-is (fast path)
         if (req.toName && req.toEmail) {
           return req;
         }
         
-        // Otherwise, fetch recipient's current profile
+        // Otherwise, fetch recipient's current profile with timeout
         try {
-          const recipientProfile = await kv.get(`user:${req.toUserId}:profile`);
+          // Race between profile fetch and timeout
+          const profilePromise = kv.get(`user:${req.toUserId}:profile`);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
+          );
+          
+          const recipientProfile = await Promise.race([profilePromise, timeoutPromise]);
+          
           if (recipientProfile) {
             return {
               ...req,
-              toName: recipientProfile.name,
-              toEmail: recipientProfile.email,
+              toName: recipientProfile.name || 'Unknown',
+              toEmail: recipientProfile.email || '',
               toProfilePhotoUrl: recipientProfile.profilePhotoUrl || null
             };
           }
         } catch (error) {
-          console.log(`Error enriching sent request for user ${req.toUserId}: ${error}`);
+          // Timeout or error - return request as-is with fallback
+          console.log(`Skipping enrichment for user ${req.toUserId} (timeout or error)`);
         }
         
-        // If we can't fetch the profile, return the request as-is
-        return req;
+        // If we can't fetch the profile, return the request with fallback data
+        return {
+          ...req,
+          toName: req.toName || 'Unknown User',
+          toEmail: req.toEmail || '',
+          toProfilePhotoUrl: null
+        };
       })
     );
     
     return c.json({ 
-      incomingRequests: receivedRequests,
+      incomingRequests: receivedRequests || [],
       outgoingRequests: enrichedSentRequests
     });
   } catch (error) {
@@ -1239,34 +1354,59 @@ app.get("/make-server-15cc1085/get-course-location", async (c) => {
 
     console.log(`Get course location: Fetching details for placeId "${placeId}"`);
 
+    // Check KV cache first to avoid repeated API calls
+    const cacheKey = `course_location:${placeId}`;
+    const cached = await kv.get(cacheKey);
+    
+    if (cached && cached.lat && cached.lng) {
+      console.log(`Get course location: Cache hit for placeId ${placeId}`);
+      return c.json({ location: { lat: cached.lat, lng: cached.lng } });
+    }
+
     // Try the legacy Place Details API (more reliable for existing place IDs)
     try {
       const legacyUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=geometry&key=${apiKey}`;
       
       console.log(`Get course location: Calling legacy API for placeId ${placeId}`);
-      const legacyResponse = await fetch(legacyUrl);
+      
+      // Add timeout to prevent hanging - reduced to 7 seconds
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      
+      const legacyResponse = await fetch(legacyUrl, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!legacyResponse.ok) {
         console.log(`Get course location: Legacy API HTTP error ${legacyResponse.status}`);
-        return c.json({ error: `HTTP Error: ${legacyResponse.status}` }, legacyResponse.status);
-      }
+        // Don't return error yet, try new API
+      } else {
+        const legacyData = await legacyResponse.json();
+        console.log(`Get course location: Legacy API returned status: ${legacyData.status}`);
 
-      const legacyData = await legacyResponse.json();
-      console.log(`Get course location: Legacy API returned status: ${legacyData.status}`);
-
-      if (legacyData.status === "OK" && legacyData.result?.geometry?.location) {
-        return c.json({ 
-          location: {
+        if (legacyData.status === "OK" && legacyData.result?.geometry?.location) {
+          const location = {
             lat: legacyData.result.geometry.location.lat,
             lng: legacyData.result.geometry.location.lng
-          }
-        });
-      }
+          };
+          
+          // Cache the result for 7 days to avoid repeated API calls
+          await kv.set(cacheKey, location);
+          
+          return c.json({ location });
+        }
 
-      // If legacy API fails, log the error but continue
-      console.log(`Get course location: Legacy API failed with status ${legacyData.status}, error: ${legacyData.error_message || 'none'}`);
+        // If legacy API fails, log the error but continue
+        console.log(`Get course location: Legacy API failed with status ${legacyData.status}, error: ${legacyData.error_message || 'none'}`);
+      }
     } catch (legacyError) {
-      console.log(`Get course location: Legacy API error: ${legacyError}`);
+      if (legacyError instanceof Error && legacyError.name === 'AbortError') {
+        console.log(`Get course location: Legacy API timeout`);
+      } else {
+        console.log(`Get course location: Legacy API error: ${legacyError}`);
+      }
     }
 
     // Try the new Places API as fallback
@@ -1274,31 +1414,45 @@ app.get("/make-server-15cc1085/get-course-location", async (c) => {
       const newApiUrl = `https://places.googleapis.com/v1/${placeId}`;
       console.log(`Get course location: Trying new API for placeId ${placeId}`);
       
+      // Add timeout to prevent hanging - reduced to 7 seconds
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      
       const newApiResponse = await fetch(newApiUrl, {
         method: "GET",
         headers: {
           "X-Goog-Api-Key": apiKey,
           "X-Goog-FieldMask": "location"
-        }
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (newApiResponse.ok) {
         const newData = await newApiResponse.json();
         console.log(`Get course location: New API success`);
         
         if (newData.location) {
-          return c.json({ 
-            location: {
-              lat: newData.location.latitude,
-              lng: newData.location.longitude
-            }
-          });
+          const location = {
+            lat: newData.location.latitude,
+            lng: newData.location.longitude
+          };
+          
+          // Cache the result for 7 days to avoid repeated API calls
+          await kv.set(cacheKey, location);
+          
+          return c.json({ location });
         }
       } else {
         console.log(`Get course location: New API failed with status ${newApiResponse.status}`);
       }
     } catch (newApiError) {
-      console.log(`Get course location: New API error: ${newApiError}`);
+      if (newApiError instanceof Error && newApiError.name === 'AbortError') {
+        console.log(`Get course location: New API timeout`);
+      } else {
+        console.log(`Get course location: New API error: ${newApiError}`);
+      }
     }
 
     // Both APIs failed
@@ -1398,6 +1552,533 @@ app.post("/make-server-15cc1085/upload-profile-photo", async (c) => {
   } catch (error) {
     console.log(`Upload profile photo error: ${error}`);
     return c.json({ error: "Failed to upload profile photo" }, 500);
+  }
+});
+
+// ============================================
+// GALLERY ROUTES
+// ============================================
+
+// Get all galleries for the user
+app.get("/make-server-15cc1085/galleries", async (c) => {
+  try {
+    console.log('[Galleries endpoint] Starting galleries fetch');
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      console.log(`[Galleries endpoint] Unauthorized - no user token`);
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    console.log(`[Galleries endpoint] Fetching galleries for user: ${user.id}`);
+
+    // Get user's gallery IDs with timeout
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('KV get timeout for gallery IDs')), 3000)
+    );
+    
+    const galleryIdsPromise = kv.get(`user:${user.id}:galleryIds`);
+    const galleryIdsData = await Promise.race([galleryIdsPromise, timeoutPromise]);
+    const galleryIds = galleryIdsData || [];
+    console.log(`[Galleries endpoint] Found ${galleryIds.length} gallery IDs for user`);
+    
+    // Fetch all galleries in parallel with timeouts
+    const galleries = await Promise.all(
+      galleryIds.map(async (galleryId: string) => {
+        try {
+          console.log(`[Galleries endpoint] Fetching gallery: ${galleryId}`);
+          
+          // Create timeout for this gallery fetch
+          const galleryTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`Timeout fetching gallery ${galleryId}`)), 2000)
+          );
+          
+          const gallery = await Promise.race([
+            kv.get(`gallery:${galleryId}`),
+            galleryTimeout
+          ]);
+          
+          if (!gallery) {
+            console.log(`[Galleries endpoint] Gallery ${galleryId} not found`);
+            return null;
+          }
+          
+          // Get photo IDs for this gallery
+          const photoIdsTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`Timeout fetching photos for ${galleryId}`)), 1500)
+          );
+          
+          const photoIdsData = await Promise.race([
+            kv.get(`gallery:${galleryId}:photos`),
+            photoIdsTimeout
+          ]);
+          const photoIds = photoIdsData || [];
+          console.log(`[Galleries endpoint] Gallery ${galleryId} has ${photoIds.length} photos`);
+          
+          // Get the first photo's URL if it exists
+          let coverPhotoUrl = undefined;
+          if (photoIds.length > 0) {
+            try {
+              const photoTimeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error(`Timeout fetching cover photo`)), 1000)
+              );
+              
+              const firstPhoto = await Promise.race([
+                kv.get(`photo:${photoIds[0]}`),
+                photoTimeout
+              ]);
+              
+              if (firstPhoto) {
+                coverPhotoUrl = firstPhoto.url;
+              }
+            } catch (photoError) {
+              console.log(`[Galleries endpoint] Error fetching cover photo for ${galleryId}: ${photoError}`);
+            }
+          }
+          
+          return {
+            ...gallery,
+            photoCount: photoIds.length,
+            coverPhotoUrl: coverPhotoUrl
+          };
+        } catch (galleryError) {
+          console.log(`[Galleries endpoint] Error fetching gallery ${galleryId}: ${galleryError}`);
+          return null;
+        }
+      })
+    );
+
+    // Filter out null values and sort by creation date (newest first)
+    const validGalleries = galleries.filter(g => g !== null);
+    console.log(`[Galleries endpoint] Returning ${validGalleries.length} galleries`);
+
+    validGalleries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return c.json({ galleries: validGalleries });
+  } catch (error) {
+    console.log(`Get galleries error: ${error}`);
+    return c.json({ error: "Failed to get galleries" }, 500);
+  }
+});
+
+// Create a new gallery
+app.post("/make-server-15cc1085/galleries", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const body = await c.req.json();
+    const { name } = body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return c.json({ error: "Gallery name is required" }, 400);
+    }
+
+    if (name.length > 50) {
+      return c.json({ error: "Gallery name must be 50 characters or less" }, 400);
+    }
+
+    // Generate unique ID
+    const galleryId = crypto.randomUUID();
+
+    // Create gallery object
+    const gallery = {
+      id: galleryId,
+      name: name.trim(),
+      createdBy: user.id,
+      memberIds: [user.id],
+      createdAt: new Date().toISOString()
+    };
+
+    // Save gallery
+    await kv.set(`gallery:${galleryId}`, gallery);
+
+    // Add gallery ID to user's list
+    const galleryIds = await kv.get(`user:${user.id}:galleryIds`) || [];
+    galleryIds.push(galleryId);
+    await kv.set(`user:${user.id}:galleryIds`, galleryIds);
+
+    return c.json({ gallery });
+  } catch (error) {
+    console.log(`Create gallery error: ${error}`);
+    return c.json({ error: "Failed to create gallery" }, 500);
+  }
+});
+
+// Update gallery name
+app.put("/make-server-15cc1085/galleries/:id", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const galleryId = c.req.param('id');
+    const body = await c.req.json();
+    const { name } = body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return c.json({ error: "Gallery name is required" }, 400);
+    }
+
+    if (name.length > 50) {
+      return c.json({ error: "Gallery name must be 50 characters or less" }, 400);
+    }
+
+    // Get gallery
+    const gallery = await kv.get(`gallery:${galleryId}`);
+    if (!gallery) {
+      return c.json({ error: "Gallery not found" }, 404);
+    }
+
+    // Check if user is the creator
+    if (gallery.createdBy !== user.id) {
+      return c.json({ error: "Only the gallery creator can update it" }, 403);
+    }
+
+    // Update gallery
+    gallery.name = name.trim();
+    await kv.set(`gallery:${galleryId}`, gallery);
+
+    return c.json({ gallery });
+  } catch (error) {
+    console.log(`Update gallery error: ${error}`);
+    return c.json({ error: "Failed to update gallery" }, 500);
+  }
+});
+
+// Add member to gallery
+app.post("/make-server-15cc1085/galleries/:id/members", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const galleryId = c.req.param('id');
+    const body = await c.req.json();
+    const { friendId } = body;
+
+    if (!friendId || typeof friendId !== 'string') {
+      return c.json({ error: "Friend ID is required" }, 400);
+    }
+
+    // Get gallery
+    const gallery = await kv.get(`gallery:${galleryId}`);
+    if (!gallery) {
+      return c.json({ error: "Gallery not found" }, 404);
+    }
+
+    // Check if user is a member (only members can add other members)
+    if (!gallery.memberIds || !gallery.memberIds.includes(user.id)) {
+      return c.json({ error: "Only gallery members can add new members" }, 403);
+    }
+
+    // Check if friend is already a member
+    if (gallery.memberIds.includes(friendId)) {
+      return c.json({ error: "User is already a member" }, 400);
+    }
+
+    // Verify the friend exists and is actually a friend of the current user
+    const friendships = await kv.get(`user:${user.id}:friends`) || [];
+    const isFriend = friendships.includes(friendId);
+    if (!isFriend) {
+      return c.json({ error: "Can only add friends to gallery" }, 403);
+    }
+
+    // Add friend to gallery members
+    gallery.memberIds.push(friendId);
+    await kv.set(`gallery:${galleryId}`, gallery);
+
+    // Add gallery to friend's gallery list
+    const friendGalleryIds = await kv.get(`user:${friendId}:galleryIds`) || [];
+    if (!friendGalleryIds.includes(galleryId)) {
+      friendGalleryIds.push(galleryId);
+      await kv.set(`user:${friendId}:galleryIds`, friendGalleryIds);
+    }
+
+    return c.json({ gallery });
+  } catch (error) {
+    console.log(`Add gallery member error: ${error}`);
+    return c.json({ error: "Failed to add member to gallery" }, 500);
+  }
+});
+
+// Get gallery members
+app.get("/make-server-15cc1085/galleries/:id/members", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const galleryId = c.req.param('id');
+
+    // Get gallery
+    const gallery = await kv.get(`gallery:${galleryId}`);
+    if (!gallery) {
+      return c.json({ error: "Gallery not found" }, 404);
+    }
+
+    // Check if user is a member
+    if (!gallery.memberIds || !gallery.memberIds.includes(user.id)) {
+      return c.json({ error: "Only gallery members can view members" }, 403);
+    }
+
+    // Get member details
+    const members = [];
+    for (const memberId of gallery.memberIds) {
+      const memberProfile = await kv.get(`user:${memberId}:profile`);
+      if (memberProfile) {
+        members.push({
+          user_id: memberId,
+          name: memberProfile.name,
+          email: memberProfile.email,
+          level: memberProfile.level || 1,
+          profilePhotoUrl: memberProfile.profilePhotoUrl
+        });
+      }
+    }
+
+    return c.json({ members });
+  } catch (error) {
+    console.log(`Get gallery members error: ${error}`);
+    return c.json({ error: "Failed to get gallery members" }, 500);
+  }
+});
+
+// Remove member from gallery
+app.delete("/make-server-15cc1085/galleries/:id/members/:memberId", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const galleryId = c.req.param('id');
+    const memberIdToRemove = c.req.param('memberId');
+
+    // Get gallery
+    const gallery = await kv.get(`gallery:${galleryId}`);
+    if (!gallery) {
+      return c.json({ error: "Gallery not found" }, 404);
+    }
+
+    // Check if user is the creator or removing themselves
+    const isCreator = gallery.createdBy === user.id;
+    const isRemovingSelf = memberIdToRemove === user.id;
+
+    if (!isCreator && !isRemovingSelf) {
+      return c.json({ error: "Only the gallery creator can remove members, or you can remove yourself" }, 403);
+    }
+
+    // Check if member exists in gallery
+    if (!gallery.memberIds || !gallery.memberIds.includes(memberIdToRemove)) {
+      return c.json({ error: "Member not found in gallery" }, 404);
+    }
+
+    // Remove member from gallery
+    gallery.memberIds = gallery.memberIds.filter((id: string) => id !== memberIdToRemove);
+    await kv.set(`gallery:${galleryId}`, gallery);
+
+    // Remove gallery from member's gallery list
+    const memberGalleryIds = await kv.get(`user:${memberIdToRemove}:galleryIds`) || [];
+    const updatedMemberGalleryIds = memberGalleryIds.filter((id: string) => id !== galleryId);
+    await kv.set(`user:${memberIdToRemove}:galleryIds`, updatedMemberGalleryIds);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.log(`Remove gallery member error: ${error}`);
+    return c.json({ error: "Failed to remove member from gallery" }, 500);
+  }
+});
+
+// Delete gallery
+app.delete("/make-server-15cc1085/galleries/:id", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const galleryId = c.req.param('id');
+
+    // Get gallery
+    const gallery = await kv.get(`gallery:${galleryId}`);
+    if (!gallery) {
+      return c.json({ error: "Gallery not found" }, 404);
+    }
+
+    // Check if user is the creator
+    if (gallery.createdBy !== user.id) {
+      return c.json({ error: "Only the gallery creator can delete it" }, 403);
+    }
+
+    // Delete gallery
+    await kv.del(`gallery:${galleryId}`);
+
+    // Remove gallery ID from user's list
+    const galleryIds = await kv.get(`user:${user.id}:galleryIds`) || [];
+    const updatedGalleryIds = galleryIds.filter((id: string) => id !== galleryId);
+    await kv.set(`user:${user.id}:galleryIds`, updatedGalleryIds);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.log(`Delete gallery error: ${error}`);
+    return c.json({ error: "Failed to delete gallery" }, 500);
+  }
+});
+
+// Upload photos to gallery
+app.post("/make-server-15cc1085/gallery-photos", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const formData = await c.req.formData();
+    const photoFile = formData.get('photo') as File;
+    const galleryId = formData.get('galleryId') as string;
+
+    if (!photoFile || !galleryId) {
+      return c.json({ error: "Photo and galleryId are required" }, 400);
+    }
+
+    // Get gallery to verify user has access
+    const gallery = await kv.get(`gallery:${galleryId}`);
+    if (!gallery) {
+      return c.json({ error: "Gallery not found" }, 404);
+    }
+
+    // Verify user is a member of this gallery
+    if (!gallery.memberIds || !gallery.memberIds.includes(user.id)) {
+      return c.json({ error: "Access denied" }, 403);
+    }
+
+    // Check file size (max 5MB per photo)
+    const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
+    if (photoFile.size > MAX_PHOTO_SIZE) {
+      return c.json({ error: "Photo size exceeds 5MB limit" }, 400);
+    }
+
+    // Create Supabase storage client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Create bucket if it doesn't exist
+    const bucketName = 'make-15cc1085-gallery-photos';
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    
+    if (!bucketExists) {
+      await supabase.storage.createBucket(bucketName, {
+        public: false,
+        fileSizeLimit: MAX_PHOTO_SIZE
+      });
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const fileExt = photoFile.name.split('.').pop();
+    const fileName = `${galleryId}/${user.id}_${timestamp}.${fileExt}`;
+
+    // Convert File to ArrayBuffer for upload
+    const arrayBuffer = await photoFile.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(fileName, buffer, {
+        contentType: photoFile.type,
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.log(`Photo upload error: ${uploadError.message}`);
+      return c.json({ error: "Failed to upload photo" }, 500);
+    }
+
+    // Create signed URL (valid for 1 year)
+    const { data: urlData } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(fileName, 31536000); // 1 year in seconds
+
+    if (!urlData?.signedUrl) {
+      return c.json({ error: "Failed to generate photo URL" }, 500);
+    }
+
+    // Create photo metadata
+    const photoId = `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const photoData = {
+      id: photoId,
+      galleryId: galleryId,
+      uploadedBy: user.id,
+      uploadedAt: new Date().toISOString(),
+      fileName: fileName,
+      url: urlData.signedUrl,
+      bucketName: bucketName
+    };
+
+    // Save photo metadata
+    await kv.set(`photo:${photoId}`, photoData);
+
+    // Add photo to gallery's photo list
+    const galleryPhotos = await kv.get(`gallery:${galleryId}:photos`) || [];
+    galleryPhotos.push(photoId);
+    await kv.set(`gallery:${galleryId}:photos`, galleryPhotos);
+
+    return c.json({
+      success: true,
+      photo: photoData
+    });
+  } catch (error) {
+    console.log(`Upload gallery photo error: ${error}`);
+    return c.json({ error: "Failed to upload photo" }, 500);
+  }
+});
+
+// Get photos for a gallery
+app.get("/make-server-15cc1085/gallery-photos/:galleryId", async (c) => {
+  try {
+    const user = await getUserFromToken(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const galleryId = c.req.param('galleryId');
+
+    // Get gallery to verify user has access
+    const gallery = await kv.get(`gallery:${galleryId}`);
+    if (!gallery) {
+      return c.json({ error: "Gallery not found" }, 404);
+    }
+
+    // Verify user is a member of this gallery
+    if (!gallery.memberIds || !gallery.memberIds.includes(user.id)) {
+      return c.json({ error: "Access denied" }, 403);
+    }
+
+    // Get photo IDs
+    const photoIds = await kv.get(`gallery:${galleryId}:photos`) || [];
+
+    // Fetch photo metadata
+    const photos = await Promise.all(
+      photoIds.map(async (photoId: string) => {
+        const photo = await kv.get(`photo:${photoId}`);
+        return photo;
+      })
+    );
+
+    return c.json({
+      photos: photos.filter(p => p !== null)
+    });
+  } catch (error) {
+    console.log(`Get gallery photos error: ${error}`);
+    return c.json({ error: "Failed to get gallery photos" }, 500);
   }
 });
 

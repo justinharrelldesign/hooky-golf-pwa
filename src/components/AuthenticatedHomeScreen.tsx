@@ -27,6 +27,7 @@ import { FriendRequestsModal } from "./FriendRequestsModal";
 import HeroiconsOutlineTrash from "../imports/HeroiconsOutlineTrash";
 import HeroiconsOutlineArrowRight from "../imports/HeroiconsOutlineArrowRight";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import { BottomNav } from "./BottomNav";
 
 interface UserProfile {
   userId: string;
@@ -69,6 +70,8 @@ interface AuthenticatedHomeScreenProps {
   onStartRound: (userProfile: UserProfile) => void;
   onLogout: () => void;
   onResumeRound: () => void;
+  onNavigateGallery?: () => void;
+  onNavigateProfile?: () => void;
   prefetchedData?: {
     profile: any;
     rounds: any[];
@@ -261,7 +264,7 @@ function HeroiconsOutlineFlagDetails() {
   );
 }
 
-export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, onResumeRound, prefetchedData }: AuthenticatedHomeScreenProps) {
+export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, onResumeRound, onNavigateGallery, onNavigateProfile, prefetchedData }: AuthenticatedHomeScreenProps) {
   const [profile, setProfile] = useState<UserProfile | null>(prefetchedData?.profile || null);
   const [rounds, setRounds] = useState<Round[]>(prefetchedData?.rounds?.slice(0, 3) || []);
   const [activeRound, setActiveRound] = useState<any>(prefetchedData?.activeRound || null);
@@ -726,7 +729,7 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, o
   }
 
   return (
-    <div className="bg-[#cee7bd] min-h-screen pb-24 relative overflow-hidden" data-name="iPhone 16 Plus - 31">
+    <div className="bg-[#cee7bd] min-h-screen pb-32 relative overflow-hidden" data-name="iPhone 16 Plus - 31">
       {/* Background Image - Golf Course at bottom */}
       <div className="fixed bottom-0 left-0 right-0 w-full pointer-events-none z-0">
         <img 
@@ -738,7 +741,7 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, o
       </div>
 
       {/* Scrollable Content */}
-      <div className="w-full max-w-[430px] mx-auto px-[24px] pt-[24px] pb-8 relative z-10">
+      <div className="w-full max-w-[430px] mx-auto px-[24px] pb-8 relative z-10" style={{ paddingTop: 'max(24px, env(safe-area-inset-top))' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="h-[40px] w-auto">
@@ -1157,7 +1160,7 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, o
         </motion.div>
 
         {/* Courses Map Card */}
-        <CoursesMapCard rounds={allRounds} accessToken={accessToken} />
+        <CoursesMapCard rounds={allRounds} />
 
         {/* Friends Card */}
         <motion.div 
@@ -2004,6 +2007,30 @@ export function AuthenticatedHomeScreen({ accessToken, onStartRound, onLogout, o
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Bottom Navigation */}
+      <BottomNav 
+        activeTab="home"
+        onStartRound={() => {
+          if (profile) {
+            onStartRound(profile);
+          }
+        }}
+        onHomeClick={() => {
+          // Already on home, could scroll to top
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onHistoryClick={() => {
+          if (onNavigateGallery) {
+            onNavigateGallery();
+          }
+        }}
+        onProfileClick={() => {
+          if (onNavigateProfile) {
+            onNavigateProfile();
+          }
+        }}
+      />
     </div>
   );
 }

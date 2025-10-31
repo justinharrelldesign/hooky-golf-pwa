@@ -17,6 +17,15 @@ interface Player {
   xp?: number;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  playerIds: string[];
+  strikes?: number;
+  maxStrikes?: number;
+  isCaught?: boolean;
+}
+
 interface Round {
   id: string;
   isVictory: boolean;
@@ -34,6 +43,14 @@ interface Round {
   players: Player[];
   bossResults?: Array<{
     playerId: string;
+    hole: number;
+    bossName: string;
+    success: boolean;
+  }>;
+  gameMode?: 'free-for-all' | 'teams';
+  teams?: Team[];
+  teamBossResults?: Array<{
+    teamId: string;
     hole: number;
     bossName: string;
     success: boolean;
@@ -120,6 +137,9 @@ export function RoundDetailsDrawer({ round, isOpen, onClose, profile, friends = 
     });
   };
 
+  // Check if this is team mode
+  const isTeamMode = round.gameMode === 'teams' && round.teams && round.teams.length > 0;
+
   // Calculate player survival status and XP
   const playersWithStatus = round.players.map(player => {
     const survived = player.strikes < player.maxStrikes;
@@ -158,6 +178,20 @@ export function RoundDetailsDrawer({ round, isOpen, onClose, profile, friends = 
 
   const survivedPlayers = playersWithStatus.filter(p => p.survived);
   const caughtPlayers = playersWithStatus.filter(p => p.isCaught);
+
+  // For team mode, organize players by team
+  const teamsWithPlayers = isTeamMode ? round.teams!.map(team => {
+    const teamPlayers = playersWithStatus.filter(p => team.playerIds.includes(p.id));
+    const teamSurvived = !team.isCaught;
+    return {
+      ...team,
+      players: teamPlayers,
+      survived: teamSurvived
+    };
+  }) : [];
+
+  const survivedTeams = teamsWithPlayers.filter(t => t.survived);
+  const caughtTeams = teamsWithPlayers.filter(t => !t.survived);
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -222,143 +256,289 @@ export function RoundDetailsDrawer({ round, isOpen, onClose, profile, friends = 
                     <p className="leading-[normal]">Game Details</p>
                   </div>
                   <div className="flex flex-col justify-end relative shrink-0 text-[#282828]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                    <p className="leading-[normal]">{round.difficulty.name} • {round.totalHoles} holes</p>
+                    <p className="leading-[normal]">{round.difficulty.name} • {round.totalHoles} holes{isTeamMode ? ' • Team Mode' : ''}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Players Card */}
+            {/* Players/Teams Card */}
             <div className="box-border content-stretch flex flex-col gap-[24px] px-[16px] py-[24px] rounded-[32px] relative mb-6">
               <div aria-hidden="true" className="absolute border border-[#517b34] border-solid inset-0 pointer-events-none rounded-[32px]" />
               
               <div className="content-stretch flex flex-col gap-[16px] items-start relative w-full">
-                {/* Hooky Heroes Section */}
-                {survivedPlayers.length > 0 && (
-                  <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full">
-                    <div className="content-stretch flex gap-[12px] items-center justify-center relative shrink-0 w-full">
-                      <p className="luckiest-guy leading-[normal] not-italic relative shrink-0 text-[#282828] text-[32px]">
-                        Hooky heroes
-                      </p>
-                    </div>
-                    <p className="font-['Geologica',_sans-serif] font-light leading-[normal] not-italic relative shrink-0 text-[#282828] text-[16px] text-center w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                      Escaped the grind and made it to glory.
-                    </p>
-                    
-                    {/* Survived Players List */}
-                    <div className="content-stretch flex flex-col items-start relative shrink-0 w-full mt-2">
-                      {survivedPlayers.map((player, index) => (
-                        <div key={player.id} className="w-full">
-                          {index > 0 && (
-                            <div className="flex items-center h-[26px] relative w-full">
-                              <div aria-hidden="true" className="border-[#517b34] border-t border-solid w-full pointer-events-none" />
-                            </div>
-                          )}
-                          <div className="content-stretch flex flex-col gap-[10px] pb-[16px] pt-0">
-                            <div className="content-stretch flex h-[40px] items-center relative shrink-0 w-full">
-                              {/* Avatar Circle with Initial */}
-                              {player.isCurrentUser || player.friendId ? (
-                                <div className="size-[40px] rounded-[100px] overflow-hidden bg-[#f97316]">
-                                  <Avatar className="w-full h-full">
-                                    <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
-                                    <AvatarFallback className="bg-transparent">
-                                      <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
-                                    </AvatarFallback>
-                                  </Avatar>
+                {isTeamMode ? (
+                  <>
+                    {/* Team Mode - Winning Teams Section */}
+                    {survivedTeams.length > 0 && (
+                      <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full">
+                        <div className="content-stretch flex gap-[12px] items-center justify-center relative shrink-0 w-full">
+                          <p className="luckiest-guy leading-[normal] not-italic relative shrink-0 text-[#282828] text-[32px]">
+                            Hooky heroes
+                          </p>
+                        </div>
+                        <p className="font-['Geologica',_sans-serif] font-light leading-[normal] not-italic relative shrink-0 text-[#282828] text-[16px] text-center w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                          Teams that escaped the grind.
+                        </p>
+                        
+                        {/* Winning Teams List */}
+                        <div className="content-stretch flex flex-col items-start relative shrink-0 w-full mt-2">
+                          {survivedTeams.map((team, teamIndex) => (
+                            <div key={team.id} className="w-full">
+                              {teamIndex > 0 && (
+                                <div className="flex items-center h-[26px] relative w-full">
+                                  <div aria-hidden="true" className="border-[#517b34] border-t border-solid w-full pointer-events-none" />
                                 </div>
-                              ) : (
-                                <Avatar className="size-[40px]">
-                                  <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
-                                  <AvatarFallback className="bg-[#517b34] text-white font-['Geologica',_sans-serif] font-bold" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                                    {player.name.charAt(0).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
                               )}
                               
-                              {/* Name and Strikes */}
-                              <div className="absolute content-stretch flex font-['Geologica',_sans-serif] font-light gap-[2px] h-[40px] items-center justify-center leading-[normal] left-[56px] not-italic overflow-clip text-[16px] top-0" style={{ width: 'calc(100% - 56px)' }}>
-                                <p className="basis-0 grow min-h-px min-w-px relative shrink-0 truncate text-[#282828]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                                  {player.name}
-                                </p>
-                                <p className="relative shrink-0 text-nowrap whitespace-pre text-[#282828]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                                  Strikes: {player.strikes}/{player.maxStrikes}
-                                </p>
+                              {/* Team Header */}
+                              <div className="content-stretch flex flex-col gap-[12px] pb-[16px] pt-0">
+                                <div className="content-stretch flex h-[40px] items-center relative shrink-0 w-full">
+                                  <p className="font-['Geologica',_sans-serif] font-bold text-[#517b34] text-[18px] flex-1" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                    {team.name}
+                                  </p>
+                                  <p className="font-['Geologica',_sans-serif] font-light text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                    Strikes: {team.strikes}/{team.maxStrikes}
+                                  </p>
+                                </div>
+                                
+                                {/* Team Members */}
+                                <div className="content-stretch flex flex-col gap-[8px] pl-[16px]">
+                                  {team.players.map((player) => (
+                                    <div key={player.id} className="content-stretch flex h-[32px] items-center relative shrink-0 w-full">
+                                      {/* Avatar */}
+                                      {player.isCurrentUser || player.friendId ? (
+                                        <div className="size-[32px] rounded-[100px] overflow-hidden bg-[#f97316] mr-[8px]">
+                                          <Avatar className="w-full h-full">
+                                            <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                            <AvatarFallback className="bg-transparent">
+                                              <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        </div>
+                                      ) : (
+                                        <Avatar className="size-[32px] mr-[8px]">
+                                          <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                          <AvatarFallback className="bg-[#517b34] text-white text-[12px] font-['Geologica',_sans-serif] font-bold" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                            {player.name.charAt(0).toUpperCase()}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      )}
+                                      
+                                      {/* Name */}
+                                      <p className="font-['Geologica',_sans-serif] font-light text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                        {player.name}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </div>
-                            
-                            {/* Individual XP Display */}
-                            {player.xp > 0 && (
-                              <div className="w-full flex items-center justify-center gap-[8px] px-[12px] py-[6px] rounded-[12px] bg-[#517b34]/10 border border-[#517b34]">
-                                <p className="luckiest-guy text-[#517b34] text-[18px]">+{player.xp} XP</p>
-                                {player.strikes === 0 && (
-                                  <p className="font-['Geologica:Regular',_sans-serif] text-[#282828] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                                    🏆 Perfect!
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Team Mode - Caught Teams Section */}
+                    {caughtTeams.length > 0 && (
+                      <div className={`content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full ${survivedTeams.length > 0 ? 'mt-6' : ''}`}>
+                        <div className="content-stretch flex gap-[12px] items-center justify-center relative shrink-0 w-full">
+                          <p className="luckiest-guy leading-[normal] not-italic relative shrink-0 text-[#282828] text-[32px]">
+                            Back to the office
+                          </p>
+                        </div>
+                        <p className="font-['Geologica',_sans-serif] font-light leading-[normal] not-italic relative shrink-0 text-[#282828] text-[16px] text-center w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                          Teams sent back to the cubicles.
+                        </p>
+                        
+                        {/* Caught Teams List */}
+                        <div className="content-stretch flex flex-col items-start relative shrink-0 w-full mt-2">
+                          {caughtTeams.map((team, teamIndex) => (
+                            <div key={team.id} className="w-full">
+                              {teamIndex > 0 && (
+                                <div className="flex items-center h-[26px] relative w-full">
+                                  <div aria-hidden="true" className="border-[#517b34] border-t border-solid w-full pointer-events-none" />
+                                </div>
+                              )}
+                              
+                              {/* Team Header */}
+                              <div className="content-stretch flex flex-col gap-[12px] pb-[16px] pt-0">
+                                <div className="content-stretch flex h-[40px] items-center relative shrink-0 w-full">
+                                  <p className="font-['Geologica',_sans-serif] font-bold text-[#c43c3c] text-[18px] flex-1" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                    {team.name}
                                   </p>
+                                  <p className="font-['Geologica',_sans-serif] font-light text-[#c43c3c] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                    CAUGHT
+                                  </p>
+                                </div>
+                                
+                                {/* Team Members */}
+                                <div className="content-stretch flex flex-col gap-[8px] pl-[16px]">
+                                  {team.players.map((player) => (
+                                    <div key={player.id} className="content-stretch flex h-[32px] items-center relative shrink-0 w-full">
+                                      {/* Avatar */}
+                                      {player.isCurrentUser || player.friendId ? (
+                                        <div className="size-[32px] rounded-[100px] overflow-hidden bg-[#c43c3c] mr-[8px]">
+                                          <Avatar className="w-full h-full">
+                                            <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                            <AvatarFallback className="bg-transparent">
+                                              <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        </div>
+                                      ) : (
+                                        <Avatar className="size-[32px] mr-[8px]">
+                                          <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                          <AvatarFallback className="bg-[#c43c3c] text-white text-[12px] font-['Geologica',_sans-serif] font-bold" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                            {player.name.charAt(0).toUpperCase()}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      )}
+                                      
+                                      {/* Name */}
+                                      <p className="font-['Geologica',_sans-serif] font-light text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                        {player.name}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Free-For-All Mode - Hooky Heroes Section */}
+                    {survivedPlayers.length > 0 && (
+                      <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full">
+                        <div className="content-stretch flex gap-[12px] items-center justify-center relative shrink-0 w-full">
+                          <p className="luckiest-guy leading-[normal] not-italic relative shrink-0 text-[#282828] text-[32px]">
+                            Hooky heroes
+                          </p>
+                        </div>
+                        <p className="font-['Geologica',_sans-serif] font-light leading-[normal] not-italic relative shrink-0 text-[#282828] text-[16px] text-center w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                          Escaped the grind and made it to glory.
+                        </p>
+                        
+                        {/* Survived Players List */}
+                        <div className="content-stretch flex flex-col items-start relative shrink-0 w-full mt-2">
+                          {survivedPlayers.map((player, index) => (
+                            <div key={player.id} className="w-full">
+                              {index > 0 && (
+                                <div className="flex items-center h-[26px] relative w-full">
+                                  <div aria-hidden="true" className="border-[#517b34] border-t border-solid w-full pointer-events-none" />
+                                </div>
+                              )}
+                              <div className="content-stretch flex flex-col gap-[10px] pb-[16px] pt-0">
+                                <div className="content-stretch flex h-[40px] items-center relative shrink-0 w-full">
+                                  {/* Avatar Circle with Initial */}
+                                  {player.isCurrentUser || player.friendId ? (
+                                    <div className="size-[40px] rounded-[100px] overflow-hidden bg-[#f97316]">
+                                      <Avatar className="w-full h-full">
+                                        <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                        <AvatarFallback className="bg-transparent">
+                                          <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    </div>
+                                  ) : (
+                                    <Avatar className="size-[40px]">
+                                      <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                      <AvatarFallback className="bg-[#517b34] text-white font-['Geologica',_sans-serif] font-bold" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                        {player.name.charAt(0).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  )}
+                                  
+                                  {/* Name and Strikes */}
+                                  <div className="absolute content-stretch flex font-['Geologica',_sans-serif] font-light gap-[2px] h-[40px] items-center justify-center leading-[normal] left-[56px] not-italic overflow-clip text-[16px] top-0" style={{ width: 'calc(100% - 56px)' }}>
+                                    <p className="basis-0 grow min-h-px min-w-px relative shrink-0 truncate text-[#282828]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                      {player.name}
+                                    </p>
+                                    <p className="relative shrink-0 text-nowrap whitespace-pre text-[#282828]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                      Strikes: {player.strikes}/{player.maxStrikes}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {/* Individual XP Display */}
+                                {player.xp > 0 && (
+                                  <div className="w-full flex items-center justify-center gap-[8px] px-[12px] py-[6px] rounded-[12px] bg-[#517b34]/10 border border-[#517b34]">
+                                    <p className="luckiest-guy text-[#517b34] text-[18px]">+{player.xp} XP</p>
+                                    {player.strikes === 0 && (
+                                      <p className="font-['Geologica:Regular',_sans-serif] text-[#282828] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                        🏆 Perfect!
+                                      </p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    )}
 
-                {/* Back to the Office Section */}
-                {caughtPlayers.length > 0 && (
-                  <div className={`content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full ${survivedPlayers.length > 0 ? 'mt-6' : ''}`}>
-                    <div className="content-stretch flex gap-[12px] items-center justify-center relative shrink-0 w-full">
-                      <p className="luckiest-guy leading-[normal] not-italic relative shrink-0 text-[#282828] text-[32px]">
-                        Back to the office
-                      </p>
-                    </div>
-                    <p className="font-['Geologica',_sans-serif] font-light leading-[normal] not-italic relative shrink-0 text-[#282828] text-[16px] text-center w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                      Cubicle captives with no escape.
-                    </p>
-                    
-                    {/* Caught Players List */}
-                    <div className="content-stretch flex flex-col items-start relative shrink-0 w-full mt-2">
-                      {caughtPlayers.map((player, index) => (
-                        <div key={player.id} className="w-full">
-                          {index > 0 && (
-                            <div className="flex items-center h-[26px] relative w-full">
-                              <div aria-hidden="true" className="border-[#517b34] border-t border-solid w-full pointer-events-none" />
-                            </div>
-                          )}
-                          <div className="content-stretch flex h-[40px] items-center relative shrink-0 w-full">
-                            {/* Avatar Circle with Initial */}
-                            {player.isCurrentUser || player.friendId ? (
-                              <div className="size-[40px] rounded-[100px] overflow-hidden bg-[#f97316]">
-                                <Avatar className="w-full h-full">
-                                  <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
-                                  <AvatarFallback className="bg-transparent">
-                                    <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
-                                  </AvatarFallback>
-                                </Avatar>
-                              </div>
-                            ) : (
-                              <Avatar className="size-[40px]">
-                                <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
-                                <AvatarFallback className="bg-[#517b34] text-white font-['Geologica',_sans-serif] font-bold" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                                  {player.name.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
-                            
-                            {/* Name and CAUGHT status */}
-                            <div className="absolute content-stretch flex font-['Geologica',_sans-serif] font-light gap-[2px] h-[40px] items-center justify-center leading-[normal] left-[56px] not-italic overflow-clip text-[16px] top-0" style={{ width: 'calc(100% - 56px)' }}>
-                              <p className="basis-0 grow min-h-px min-w-px relative shrink-0 truncate text-[#282828]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                                {player.name}
-                              </p>
-                              <p className="relative shrink-0 text-nowrap whitespace-pre text-[#c43c3c]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
-                                CAUGHT
-                              </p>
-                            </div>
-                          </div>
+                    {/* Free-For-All Mode - Back to the Office Section */}
+                    {caughtPlayers.length > 0 && (
+                      <div className={`content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full ${survivedPlayers.length > 0 ? 'mt-6' : ''}`}>
+                        <div className="content-stretch flex gap-[12px] items-center justify-center relative shrink-0 w-full">
+                          <p className="luckiest-guy leading-[normal] not-italic relative shrink-0 text-[#282828] text-[32px]">
+                            Back to the office
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                        <p className="font-['Geologica',_sans-serif] font-light leading-[normal] not-italic relative shrink-0 text-[#282828] text-[16px] text-center w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                          Cubicle captives with no escape.
+                        </p>
+                        
+                        {/* Caught Players List */}
+                        <div className="content-stretch flex flex-col items-start relative shrink-0 w-full mt-2">
+                          {caughtPlayers.map((player, index) => (
+                            <div key={player.id} className="w-full">
+                              {index > 0 && (
+                                <div className="flex items-center h-[26px] relative w-full">
+                                  <div aria-hidden="true" className="border-[#517b34] border-t border-solid w-full pointer-events-none" />
+                                </div>
+                              )}
+                              <div className="content-stretch flex h-[40px] items-center relative shrink-0 w-full">
+                                {/* Avatar Circle with Initial */}
+                                {player.isCurrentUser || player.friendId ? (
+                                  <div className="size-[40px] rounded-[100px] overflow-hidden bg-[#f97316]">
+                                    <Avatar className="w-full h-full">
+                                      <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                      <AvatarFallback className="bg-transparent">
+                                        <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  </div>
+                                ) : (
+                                  <Avatar className="size-[40px]">
+                                    <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                    <AvatarFallback className="bg-[#517b34] text-white font-['Geologica',_sans-serif] font-bold" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                      {player.name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                                
+                                {/* Name and CAUGHT status */}
+                                <div className="absolute content-stretch flex font-['Geologica',_sans-serif] font-light gap-[2px] h-[40px] items-center justify-center leading-[normal] left-[56px] not-italic overflow-clip text-[16px] top-0" style={{ width: 'calc(100% - 56px)' }}>
+                                  <p className="basis-0 grow min-h-px min-w-px relative shrink-0 truncate text-[#282828]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                    {player.name}
+                                  </p>
+                                  <p className="relative shrink-0 text-nowrap whitespace-pre text-[#c43c3c]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                    CAUGHT
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

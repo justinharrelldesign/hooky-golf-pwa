@@ -17,12 +17,25 @@ interface Player {
   friendId?: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  playerIds: string[];
+  strikes?: number;
+  maxStrikes?: number;
+  isCaught?: boolean;
+}
+
 interface PlayerCaughtScreenProps {
   caughtPlayers: Player[];
   allPlayersCaught?: boolean;
   onContinue: () => void;
   onPlayAgain?: () => void;
   onReturnHome?: () => void;
+  gameMode?: 'free-for-all' | 'teams';
+  caughtTeams?: Team[];
+  teams?: Team[];
+  players?: Player[];
 }
 
 function IconOutlineArrowSmRight() {
@@ -49,12 +62,36 @@ function IconOutlineHome() {
   );
 }
 
-export function PlayerCaughtScreen({ caughtPlayers, allPlayersCaught = false, onContinue, onPlayAgain, onReturnHome }: PlayerCaughtScreenProps) {
+function IconOutlineUserGroup() {
+  return (
+    <div className="relative size-full" data-name="Icon/Outline/user-group">
+      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
+        <path d="M1 13c0-1.1.9-2 2-2h4a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-2ZM13 13c0-1.1.9-2 2-2h4a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2ZM7 1a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM17 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" stroke="var(--stroke-0, #FFFFFF)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" fill="none" />
+      </svg>
+    </div>
+  );
+}
+
+export function PlayerCaughtScreen({ 
+  caughtPlayers, 
+  allPlayersCaught = false, 
+  onContinue, 
+  onPlayAgain, 
+  onReturnHome,
+  gameMode = 'free-for-all',
+  caughtTeams = [],
+  teams = [],
+  players = []
+}: PlayerCaughtScreenProps) {
   const getPlayerInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const isPlural = caughtPlayers.length > 1;
+  const getPlayerById = (playerId: string) => {
+    return players.find(p => p.id === playerId);
+  };
+
+  const isPlural = gameMode === 'teams' ? caughtTeams.length > 1 : caughtPlayers.length > 1;
 
   const handleButtonClick = () => {
     if (allPlayersCaught && onPlayAgain) {
@@ -74,16 +111,73 @@ export function PlayerCaughtScreen({ caughtPlayers, allPlayersCaught = false, on
           {/* Header Text */}
           <div className="content-stretch flex flex-col gap-[8px] items-center leading-[normal] not-italic relative shrink-0 text-[#282828] text-center w-full">
             <h1 className="relative shrink-0 text-[32px]" style={{ width: "min-content", minWidth: "100%" }}>
-              {allPlayersCaught ? "All Players have been caught!" : (isPlural ? "Players caught!" : "Player caught!")}
+              {gameMode === 'teams' 
+                ? (allPlayersCaught ? "All Teams have been caught!" : (isPlural ? "Teams caught!" : "Team caught!"))
+                : (allPlayersCaught ? "All Players have been caught!" : (isPlural ? "Players caught!" : "Player caught!"))}
             </h1>
             <p className="font-['Geologica:Regular',_sans-serif] font-normal relative shrink-0 text-[18px] w-[350px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
               Back to the office they go. Better luck next time...
             </p>
           </div>
           
-          {/* Caught Players List */}
+          {/* Caught Players/Teams List */}
           <div className="content-stretch flex flex-col gap-[10px] items-start relative shrink-0 w-full">
-            {caughtPlayers.map((player, index) => (
+            {gameMode === 'teams' ? (
+              // Team Mode
+              caughtTeams.map((team, index) => (
+                <div key={team.id} className="w-full">
+                  {index > 0 && (
+                    <div className="box-border pb-[16px] relative w-full">
+                      <div aria-hidden="true" className="border-[#517b34] border-[0px_0px_1px] border-solid w-full h-[1px]" />
+                    </div>
+                  )}
+                  <div className="w-full flex flex-col gap-[8px]">
+                    {/* Team Name and Strikes */}
+                    <div className="w-full flex items-center justify-between">
+                      <p className="font-['Geologica:Bold',_sans-serif] font-bold text-[#282828] text-[16px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                        {team.name}
+                      </p>
+                      <p className="font-['Geologica:Light',_sans-serif] font-light text-[#C43C3C] text-[16px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                        Strikes: {team.strikes}/{team.maxStrikes}
+                      </p>
+                    </div>
+                    {/* Team Members */}
+                    <div className="flex flex-col gap-[4px]">
+                      {team.playerIds.map((playerId) => {
+                        const player = getPlayerById(playerId);
+                        if (!player) return null;
+                        
+                        return (
+                          <div key={playerId} className="flex items-center">
+                            {player.isCurrentUser || player.friendId ? (
+                              <div className="w-[20px] h-[20px] rounded-[100px] overflow-hidden bg-[#517b34] mr-[8px]">
+                                <Avatar className="w-full h-full">
+                                  <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                  <AvatarFallback className="bg-transparent">
+                                    <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                                  </AvatarFallback>
+                                </Avatar>
+                              </div>
+                            ) : (
+                              <div className="bg-[#517b34] box-border content-stretch flex flex-col gap-[10px] items-center justify-center overflow-clip px-[4px] py-[2px] relative rounded-[100px] shrink-0 w-[20px] h-[20px] mr-[8px]">
+                                <p className="font-['Geologica:Bold',_sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[8px] text-white w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                  {getPlayerInitials(player.name)}
+                                </p>
+                              </div>
+                            )}
+                            <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                              {player.name}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              // Free-for-all Mode
+              caughtPlayers.map((player, index) => (
               <div key={player.id} className="w-full">
                 {index > 0 && (
                   <div className="box-border pb-[16px] relative w-full">
@@ -115,9 +209,10 @@ export function PlayerCaughtScreen({ caughtPlayers, allPlayersCaught = false, on
                       Strikes: {player.strikes}/{player.maxStrikes}
                     </p>
                   </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
         

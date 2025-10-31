@@ -38,7 +38,7 @@ export function FriendRequestsModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50"
+            className="fixed inset-0 bg-black/50 z-[10000]"
             onClick={onClose}
           />
 
@@ -47,7 +47,7 @@ export function FriendRequestsModal({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-[400px]"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[10001] w-[90%] max-w-[400px]"
           >
             <div className="bg-[#cee7bd] rounded-[32px] border-2 border-[#517b34] p-6 shadow-xl max-h-[80vh] overflow-hidden flex flex-col">
               {/* Header */}

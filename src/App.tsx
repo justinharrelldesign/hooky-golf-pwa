@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
 import { useState, useEffect, useRef } from "react";
 import { IntroScreen } from "./components/IntroScreen";
 import { LoginScreen } from "./components/LoginScreen";
 import { SignupScreen } from "./components/SignupScreen";
 import { AuthenticatedHomeScreen } from "./components/AuthenticatedHomeScreen";
+import { GalleriesHubScreen } from "./components/GalleriesHubScreen";
+import { GalleryScreen } from "./components/GalleryScreen";
+import { ProfileScreen } from "./components/ProfileScreen";
 import { GameSetupScreen } from "./components/GameSetupScreen";
 import { BossIntroScreen } from "./components/BossIntroScreen";
 import { BossResultsScreen } from "./components/BossResultsScreen";
@@ -64,6 +66,15 @@ interface Player {
   friendId?: string; // Friend's user ID if this player is a friend
 }
 
+interface Team {
+  id: string;
+  name: string;
+  playerIds: string[];
+  strikes?: number;
+  maxStrikes?: number;
+  isCaught?: boolean;
+}
+
 interface PlayerBossResult {
   playerId: string;
   hole: number;
@@ -71,11 +82,24 @@ interface PlayerBossResult {
   success: boolean;
 }
 
+interface TeamBossResult {
+  teamId: string;
+  hole: number;
+  bossName: string;
+  success: boolean;
+}
+
+interface TeamResult {
+  teamId: string;
+  success: boolean | null;
+}
+
 interface GameState {
-  screen: 'login' | 'signup' | 'home' | 'intro' | 'setup' | 'boss' | 'results' | 'caught' | 'progress' | 'summary';
+  screen: 'login' | 'signup' | 'home' | 'galleries-hub' | 'gallery' | 'profile' | 'intro' | 'setup' | 'boss' | 'results' | 'caught' | 'progress' | 'summary';
   difficulty: { name: string; strikes: number } | null;
   currentHole: number;
   totalHoles: number;
+  selectedGalleryId?: string;
   players: Player[];
   bossResults: PlayerBossResult[];
   shuffledBosses: Boss[];
@@ -88,6 +112,11 @@ interface GameState {
   usedChallenges: string[];
   currentChallenge?: string; // Tracks the current challenge for this hole
   course?: { placeId: string; name: string; address: string };
+  // Team-related state
+  gameMode?: 'free-for-all' | 'teams';
+  teams?: Team[];
+  teamBossResults?: TeamBossResult[];
+  newlyCaughtTeams?: Team[];
 }
 
 interface AuthState {
@@ -361,6 +390,7 @@ export default function App() {
     activeRound: any;
     incomingRequests: any[];
     outgoingRequests: any[];
+    galleries: any[];
   } | null>(null);
   
   const [authState, setAuthState] = useState<AuthState>({
@@ -479,23 +509,29 @@ export default function App() {
       setGameState(prev => ({ ...prev, screen: 'login' }));
       setSessionChecked(true);
       setUserDataLoaded(true);
-      setInitialLoadComplete(true);
+      isInitialLoadRef.current = false; // Initial load complete
     }
   };
 
   const prefetchUserData = async (accessToken: string) => {
+    // Set a timeout to ensure we don't hang forever
+    const timeoutId = setTimeout(() => {
+      console.warn("[Prefetch] Timeout after 10 seconds, continuing anyway");
+      setUserDataLoaded(true);
+    }, 10000);
+
     try {
       // Helper to safely parse responses
       const parseResponse = async (res: Response, endpoint: string, defaultValue: any) => {
         if (!res.ok) {
-          const text = await res.text();
+          const text = await res.text().catch(() => "Could not read response");
           console.error(`[Prefetch] ${endpoint} error (${res.status}):`, text);
           return defaultValue;
         }
         try {
           const contentType = res.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
-            const text = await res.text();
+            const text = await res.text().catch(() => "Could not read response");
             console.error(`[Prefetch] ${endpoint} returned non-JSON:`, text);
             return defaultValue;
           }
@@ -506,46 +542,63 @@ export default function App() {
         }
       };
 
-      // Fetch all data in parallel
-      const [profileRes, roundsRes, friendsRes, activeRoundRes, friendRequestsRes] = await Promise.all([
-        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/profile`, {
+      // Helper to add timeout to fetch
+      const fetchWithTimeout = (url: string, options: any, timeout = 5000) => {
+        return Promise.race([
+          fetch(url, options),
+          new Promise<Response>((_, reject) => 
+            setTimeout(() => reject(new Error('Fetch timeout')), timeout)
+          )
+        ]);
+      };
+
+      // Fetch all data in parallel with timeouts
+      const [profileRes, roundsRes, friendsRes, activeRoundRes, friendRequestsRes, galleriesRes] = await Promise.all([
+        fetchWithTimeout(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/profile`, {
           headers: { "Authorization": `Bearer ${accessToken}` }
-        }).catch(err => {
+        }, 5000).catch(err => {
           console.error("[Prefetch] profile fetch failed:", err);
           return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
         }),
-        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/rounds`, {
+        fetchWithTimeout(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/rounds`, {
           headers: { "Authorization": `Bearer ${accessToken}` }
-        }).catch(err => {
+        }, 10000).catch(err => {
           console.error("[Prefetch] rounds fetch failed:", err);
           return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
         }),
-        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/friends`, {
+        fetchWithTimeout(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/friends`, {
           headers: { "Authorization": `Bearer ${accessToken}` }
-        }).catch(err => {
+        }, 5000).catch(err => {
           console.error("[Prefetch] friends fetch failed:", err);
           return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
         }),
-        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/active-round`, {
+        fetchWithTimeout(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/active-round`, {
           headers: { "Authorization": `Bearer ${accessToken}` }
-        }).catch(err => {
+        }, 5000).catch(err => {
           console.error("[Prefetch] active-round fetch failed:", err);
           return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
         }),
-        fetch(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/friend-requests`, {
+        fetchWithTimeout(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/friend-requests`, {
           headers: { "Authorization": `Bearer ${accessToken}` }
-        }).catch(err => {
+        }, 8000).catch(err => {
           console.error("[Prefetch] friend-requests fetch failed:", err);
+          return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
+        }),
+        fetchWithTimeout(`https://${projectId}.supabase.co/functions/v1/make-server-15cc1085/galleries`, {
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        }, 5000).catch(err => {
+          console.error("[Prefetch] galleries fetch failed:", err);
           return new Response(JSON.stringify({ error: "Network error" }), { status: 500 });
         })
       ]);
 
-      const [profileData, roundsData, friendsData, activeRoundData, friendRequestsData] = await Promise.all([
+      const [profileData, roundsData, friendsData, activeRoundData, friendRequestsData, galleriesData] = await Promise.all([
         parseResponse(profileRes, "profile", { profile: null }),
         parseResponse(roundsRes, "rounds", { rounds: [] }),
         parseResponse(friendsRes, "friends", { friends: [] }),
         parseResponse(activeRoundRes, "active-round", { round: null }),
-        parseResponse(friendRequestsRes, "friend-requests", { incomingRequests: [], outgoingRequests: [] })
+        parseResponse(friendRequestsRes, "friend-requests", { incomingRequests: [], outgoingRequests: [] }),
+        parseResponse(galleriesRes, "galleries", { galleries: [] })
       ]);
 
       setPrefetchedData({
@@ -554,12 +607,15 @@ export default function App() {
         friends: friendsData.friends || [],
         activeRound: activeRoundData.round || null,
         incomingRequests: friendRequestsData.incomingRequests || [],
-        outgoingRequests: friendRequestsData.outgoingRequests || []
+        outgoingRequests: friendRequestsData.outgoingRequests || [],
+        galleries: galleriesData.galleries || []
       });
 
+      clearTimeout(timeoutId);
       setUserDataLoaded(true);
     } catch (error) {
       console.error("[Prefetch] Failed to prefetch user data:", error);
+      clearTimeout(timeoutId);
       setUserDataLoaded(true); // Continue anyway
     }
   };
@@ -661,7 +717,7 @@ export default function App() {
     }
   };
 
-  const handleStartGame = async (difficulty: { name: string; strikes: number }, selectedPlayers: { id: string; name: string; avatarUrl?: string; isCurrentUser?: boolean; friendId?: string }[], holes: number, course?: { placeId: string; name: string; address: string } | null) => {
+  const handleStartGame = async (difficulty: { name: string; strikes: number }, selectedPlayers: { id: string; name: string; avatarUrl?: string; isCurrentUser?: boolean; friendId?: string }[], holes: number, course?: { placeId: string; name: string; address: string } | null, gameMode?: 'free-for-all' | 'teams', teams?: Team[]) => {
     const playersWithDifficulty: Player[] = selectedPlayers.map(player => {
       console.log('Creating player for game:', { name: player.name, avatarUrl: player.avatarUrl, isCurrentUser: player.isCurrentUser, friendId: player.friendId });
       return {
@@ -680,6 +736,14 @@ export default function App() {
 
     // Create an arranged array of bosses with priority bosses first, then shuffled remaining
     const shuffledBosses = arrangeBossesWithPriority(bosses);
+
+    // Initialize teams with difficulty settings if in team mode
+    const teamsWithDifficulty: Team[] | undefined = gameMode === 'teams' && teams ? teams.map(team => ({
+      ...team,
+      strikes: 0,
+      maxStrikes: difficulty.strikes,
+      isCaught: false
+    })) : undefined;
 
     // Save round as in-progress to backend
     try {
@@ -700,7 +764,9 @@ export default function App() {
               difficulty,
               totalHoles: holes,
               players: playersWithDifficulty,
-              course: course || null
+              course: course || null,
+              gameMode: gameMode || 'free-for-all',
+              teams: teamsWithDifficulty || null
             }),
           }
         );
@@ -723,7 +789,10 @@ export default function App() {
       isVictory: false,
       skipsRemaining: 3,
       skippedBosses: [],
-      usedChallenges: []
+      usedChallenges: [],
+      gameMode: gameMode || 'free-for-all',
+      teams: teamsWithDifficulty,
+      teamBossResults: []
     });
   };
 
@@ -737,36 +806,126 @@ export default function App() {
     }));
   };
 
-  const handleSubmitResults = (results: PlayerResult[]) => {
-    // Apply strikes to players based on results and mark caught players
-    const updatedPlayers = gameState.players.map(player => {
-      const result = results.find(r => r.playerId === player.id);
-      if (result && result.success === false) {
-        const newStrikes = player.strikes + 1;
-        const caught = newStrikes >= player.maxStrikes;
-        return { 
-          ...player, 
-          strikes: newStrikes,
+  const handleSubmitResults = (results: PlayerResult[], teamResults?: TeamResult[]) => {
+    // Handle team mode differently
+    if (gameState.gameMode === 'teams' && teamResults && gameState.teams) {
+      // Apply strikes to teams based on results and mark caught teams
+      const updatedTeams = gameState.teams.map(team => {
+        const result = teamResults.find(r => r.teamId === team.id);
+        if (result && result.success === false) {
+          const newStrikes = (team.strikes || 0) + 1;
+          const caught = newStrikes >= (team.maxStrikes || 3);
+          return { 
+            ...team, 
+            strikes: newStrikes,
+            isCaught: caught
+          };
+        }
+        // Preserve existing caught status for teams who didn't play this round
+        const caught = (team.strikes || 0) >= (team.maxStrikes || 3);
+        return {
+          ...team,
           isCaught: caught
         };
-      }
-      // Preserve existing caught status for players who didn't play this round
-      const caught = player.strikes >= player.maxStrikes;
-      return {
-        ...player,
-        isCaught: caught
-      };
-    });
+      });
 
-    // Create boss results for this hole
-    const newBossResults: PlayerBossResult[] = results
-      .filter(result => result.success !== null)
-      .map(result => ({
-        playerId: result.playerId,
-        hole: gameState.currentHole,
-        bossName: currentBoss.name,
-        success: result.success!
-      }));
+      // Create team boss results for this hole
+      const newTeamBossResults: TeamBossResult[] = teamResults
+        .filter(result => result.success !== null)
+        .map(result => ({
+          teamId: result.teamId,
+          hole: gameState.currentHole,
+          bossName: currentBoss.name,
+          success: result.success!
+        }));
+
+      // Check if ALL teams are caught
+      const allTeamsCaught = updatedTeams.every(team => team.isCaught === true);
+      
+      // Check if any teams were just caught this round
+      const newlyCaughtTeams = updatedTeams.filter((team, index) => {
+        const oldTeam = gameState.teams![index];
+        return team.isCaught === true && oldTeam.isCaught !== true;
+      });
+      
+      // Check if this is the final hole
+      const isFinalHole = gameState.currentHole === gameState.totalHoles;
+
+      if (allTeamsCaught) {
+        // All teams caught
+        setGameState(prev => ({
+          ...prev,
+          teams: updatedTeams,
+          teamBossResults: [...(prev.teamBossResults || []), ...newTeamBossResults],
+          screen: 'caught',
+          newlyCaughtTeams: updatedTeams,
+          gameComplete: true,
+          isVictory: false,
+          failedAtHole: prev.currentHole
+        }));
+      } else if (isFinalHole) {
+        // Final hole - check if current user's team made it
+        const currentUserPlayer = gameState.players.find(p => p.isCurrentUser);
+        const currentUserTeam = updatedTeams.find(t => t.playerIds.includes(currentUserPlayer?.id || ''));
+        const currentUserMadeIt = currentUserTeam && !currentUserTeam.isCaught;
+        
+        setGameState(prev => ({
+          ...prev,
+          teams: updatedTeams,
+          teamBossResults: [...(prev.teamBossResults || []), ...newTeamBossResults],
+          screen: 'summary',
+          gameComplete: true,
+          isVictory: currentUserMadeIt || false
+        }));
+      } else if (newlyCaughtTeams.length > 0) {
+        // Some teams caught
+        setGameState(prev => ({
+          ...prev,
+          teams: updatedTeams,
+          teamBossResults: [...(prev.teamBossResults || []), ...newTeamBossResults],
+          screen: 'caught',
+          newlyCaughtTeams: newlyCaughtTeams
+        }));
+      } else {
+        // Continue playing - no teams caught this round
+        setGameState(prev => ({
+          ...prev,
+          teams: updatedTeams,
+          teamBossResults: [...(prev.teamBossResults || []), ...newTeamBossResults],
+          screen: 'progress'
+        }));
+      }
+    } else {
+      // Free-for-all mode - original player-based logic
+      // Apply strikes to players based on results and mark caught players
+      const updatedPlayers = gameState.players.map(player => {
+        const result = results.find(r => r.playerId === player.id);
+        if (result && result.success === false) {
+          const newStrikes = player.strikes + 1;
+          const caught = newStrikes >= player.maxStrikes;
+          return { 
+            ...player, 
+            strikes: newStrikes,
+            isCaught: caught
+          };
+        }
+        // Preserve existing caught status for players who didn't play this round
+        const caught = player.strikes >= player.maxStrikes;
+        return {
+          ...player,
+          isCaught: caught
+        };
+      });
+
+      // Create boss results for this hole
+      const newBossResults: PlayerBossResult[] = results
+        .filter(result => result.success !== null)
+        .map(result => ({
+          playerId: result.playerId,
+          hole: gameState.currentHole,
+          bossName: currentBoss.name,
+          success: result.success!
+        }));
 
     // Check if ALL players are caught (have maxed out their strikes)
     const allPlayersCaught = updatedPlayers.every(player => player.isCaught === true);
@@ -814,14 +973,15 @@ export default function App() {
         screen: 'caught',
         newlyCaughtPlayers: newlyCaughtPlayers
       }));
-    } else {
-      // Continue playing - no players caught this round
-      setGameState(prev => ({
-        ...prev,
-        players: updatedPlayers,
-        bossResults: [...prev.bossResults, ...newBossResults],
-        screen: 'progress'
-      }));
+      } else {
+        // Continue playing - no players caught this round
+        setGameState(prev => ({
+          ...prev,
+          players: updatedPlayers,
+          bossResults: [...prev.bossResults, ...newBossResults],
+          screen: 'progress'
+        }));
+      }
     }
   };
 
@@ -860,6 +1020,13 @@ export default function App() {
     });
   };
 
+  const refreshUserData = async () => {
+    if (!authState.accessToken) return;
+    setPrefetchedData(null);
+    setHomeScreenKey(prev => prev + 1);
+    await prefetchUserData(authState.accessToken);
+  };
+
   const handleReturnHomeFromCaught = async () => {
     // Save round to backend before resetting
     await saveRoundToBackend();
@@ -870,11 +1037,8 @@ export default function App() {
     // Reset game and return to home screen
     currentUser = null;
     
-    // Clear prefetched data to force reload
-    setPrefetchedData(null);
-    
-    // Force home screen to remount and reload data
-    setHomeScreenKey(prev => prev + 1);
+    // Refresh user data since round stats changed
+    await refreshUserData();
     
     setGameState({
       screen: 'home',
@@ -1048,7 +1212,10 @@ export default function App() {
             bossResults: gameState.bossResults,
             completedAt: new Date().toISOString(),
             course: gameState.course || null,
-            skippedBosses: gameState.skippedBosses
+            skippedBosses: gameState.skippedBosses,
+            gameMode: gameState.gameMode || 'free-for-all',
+            teams: gameState.teams || [],
+            teamBossResults: gameState.teamBossResults || []
           }),
         }
       );
@@ -1107,11 +1274,8 @@ export default function App() {
     // Reset game and return to home screen
     currentUser = null;
     
-    // Clear prefetched data to force reload
-    setPrefetchedData(null);
-    
-    // Force home screen to remount and reload data
-    setHomeScreenKey(prev => prev + 1);
+    // Refresh user data since round stats changed
+    await refreshUserData();
     
     setGameState({
       screen: 'home',
@@ -1143,11 +1307,8 @@ export default function App() {
     // Small delay to ensure backend state is updated
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Clear prefetched data to force reload
-    setPrefetchedData(null);
-    
-    // Force home screen to remount and reload data
-    setHomeScreenKey(prev => prev + 1);
+    // Refresh user data to get updated active round status
+    await refreshUserData();
     
     setGameState({
       screen: 'home',
@@ -1253,6 +1414,77 @@ export default function App() {
           onLogout={handleLogout}
           onResumeRound={handleResumeRound}
           prefetchedData={prefetchedData}
+          onNavigateGallery={() => setGameState(prev => ({ ...prev, screen: 'galleries-hub' }))}
+          onNavigateProfile={() => setGameState(prev => ({ ...prev, screen: 'profile' }))}
+        />
+      )}
+
+      {gameState.screen === 'galleries-hub' && authState.accessToken && (
+        <GalleriesHubScreen
+          accessToken={authState.accessToken}
+          onLogout={handleLogout}
+          onGallerySelect={(galleryId) => setGameState(prev => ({ ...prev, screen: 'gallery', selectedGalleryId: galleryId }))}
+          onNavigateToHome={() => setGameState(prev => ({ ...prev, screen: 'home' }))}
+          onNavigateToProfile={() => setGameState(prev => ({ ...prev, screen: 'profile' }))}
+          onStartRound={() => {
+            if (prefetchedData?.profile) {
+              handleStartRound(prefetchedData.profile);
+            }
+          }}
+          currentUserProfile={prefetchedData?.profile ? {
+            id: prefetchedData.profile.userId,
+            display_name: prefetchedData.profile.name,
+            avatar_url: prefetchedData.profile.profilePhotoUrl,
+            rank: prefetchedData.profile.rank
+          } : undefined}
+        />
+      )}
+
+      {gameState.screen === 'gallery' && authState.accessToken && (() => {
+        console.log('[App] Rendering GalleryScreen with prefetchedData:', {
+          hasProfile: !!prefetchedData?.profile,
+          userId: prefetchedData?.profile?.userId,
+          name: prefetchedData?.profile?.name,
+          hasProfilePhoto: !!prefetchedData?.profile?.profilePhotoUrl,
+          profilePhotoUrl: prefetchedData?.profile?.profilePhotoUrl
+        });
+        
+        return (
+          <GalleryScreen
+            accessToken={authState.accessToken}
+            currentUserProfile={prefetchedData?.profile ? {
+              userId: prefetchedData.profile.userId,
+              name: prefetchedData.profile.name,
+              profilePhotoUrl: prefetchedData.profile.profilePhotoUrl
+            } : undefined}
+            prefetchedGalleries={prefetchedData?.galleries}
+            selectedGalleryId={gameState.selectedGalleryId}
+            onNavigateHome={() => setGameState(prev => ({ ...prev, screen: 'home' }))}
+            onNavigateBack={() => setGameState(prev => ({ ...prev, screen: 'galleries-hub' }))}
+            onNavigateProfile={() => setGameState(prev => ({ ...prev, screen: 'profile' }))}
+            onStartRound={() => {
+              // Get user profile from prefetched data if available
+              if (prefetchedData?.profile) {
+                handleStartRound(prefetchedData.profile);
+              }
+            }}
+            onLogout={handleLogout}
+          />
+        );
+      })()}
+
+      {gameState.screen === 'profile' && authState.accessToken && (
+        <ProfileScreen
+          accessToken={authState.accessToken}
+          onNavigateHome={() => setGameState(prev => ({ ...prev, screen: 'home' }))}
+          onNavigateGallery={() => setGameState(prev => ({ ...prev, screen: 'galleries-hub' }))}
+          onStartRound={() => {
+            // Get user profile from prefetched data if available
+            if (prefetchedData?.profile) {
+              handleStartRound(prefetchedData.profile);
+            }
+          }}
+          onLogout={handleLogout}
         />
       )}
 
@@ -1292,16 +1524,22 @@ export default function App() {
           onExitRound={handleExitRound}
           currentChallenge={gameState.currentChallenge}
           playerCount={gameState.players.length}
+          gameMode={gameState.gameMode}
+          teams={gameState.teams || []}
         />
       )}
       
-      {gameState.screen === 'caught' && gameState.newlyCaughtPlayers && (
+      {gameState.screen === 'caught' && (gameState.newlyCaughtPlayers || gameState.newlyCaughtTeams) && (
         <PlayerCaughtScreen
-          caughtPlayers={gameState.newlyCaughtPlayers}
+          caughtPlayers={gameState.newlyCaughtPlayers || []}
           allPlayersCaught={gameState.gameComplete && !gameState.isVictory}
           onContinue={handleContinueFromCaught}
           onPlayAgain={handlePlayAgainFromCaught}
           onReturnHome={handleReturnHomeFromCaught}
+          gameMode={gameState.gameMode}
+          caughtTeams={gameState.newlyCaughtTeams}
+          teams={gameState.teams}
+          players={gameState.players}
         />
       )}
       
@@ -1314,6 +1552,9 @@ export default function App() {
           totalHoles={gameState.totalHoles}
           onContinue={handleContinue}
           onExitRound={handleExitRound}
+          gameMode={gameState.gameMode}
+          teams={gameState.teams || []}
+          teamBossResults={gameState.teamBossResults || []}
         />
       )}
       
@@ -1329,6 +1570,9 @@ export default function App() {
           totalHoles={gameState.totalHoles}
           onPlayAgain={handlePlayAgain}
           onReturnHome={handleReturnHomeFromSummary}
+          gameMode={gameState.gameMode}
+          teams={gameState.teams || []}
+          teamBossResults={gameState.teamBossResults || []}
         />
       )}
 

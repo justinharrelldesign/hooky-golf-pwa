@@ -26,8 +26,24 @@ interface Boss {
   backgroundColor: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  playerIds: string[];
+  strikes?: number;
+  maxStrikes?: number;
+  isCaught?: boolean;
+}
+
 interface PlayerBossResult {
   playerId: string;
+  hole: number;
+  bossName: string;
+  success: boolean;
+}
+
+interface TeamBossResult {
+  teamId: string;
   hole: number;
   bossName: string;
   success: boolean;
@@ -44,6 +60,9 @@ interface EndRoundSummaryScreenProps {
   totalHoles?: number;
   onPlayAgain: () => void;
   onReturnHome?: () => void;
+  gameMode?: 'free-for-all' | 'teams';
+  teams?: Team[];
+  teamBossResults?: TeamBossResult[];
 }
 
 function IconOutlineArrowSmRight() {
@@ -78,21 +97,52 @@ function getPlayerInitials(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossResults, bosses, skippedBosses, difficulty, totalHoles, onPlayAgain, onReturnHome }: EndRoundSummaryScreenProps) {
+export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossResults, bosses, skippedBosses, difficulty, totalHoles, onPlayAgain, onReturnHome, gameMode = 'free-for-all', teams = [], teamBossResults = [] }: EndRoundSummaryScreenProps) {
   const escapedPlayers = players.filter(p => !p.isCaught);
   const caughtPlayers = players.filter(p => p.isCaught);
+  const escapedTeams = teams.filter(t => t.isCaught !== true);
+  const caughtTeams = teams.filter(t => t.isCaught === true);
+  
+  // Helper function to get player by ID
+  const getPlayerById = (playerId: string) => {
+    return players.find(p => p.id === playerId);
+  };
   
   // Calculate individual XP for each player with difficulty and hole multipliers
-  const playerXPs = players.map(player => ({
-    playerId: player.id,
-    xp: calculatePlayerXP(
-      isVictory,
-      player.isCaught || false,
-      player.strikes,
-      difficulty?.name || 'Easy',
-      totalHoles || 9
-    )
-  }));
+  // In team mode, players get XP based on their team's performance
+  const playerXPs = players.map(player => {
+    let xp = 0;
+    
+    if (gameMode === 'teams') {
+      // Find the team this player is on
+      const playerTeam = teams.find(team => team.playerIds.includes(player.id));
+      if (playerTeam) {
+        // Player gets XP if their team won (not caught) and round was victorious
+        const teamWon = isVictory && playerTeam.isCaught !== true;
+        xp = calculatePlayerXP(
+          teamWon,
+          false, // In team mode, individual player caught status doesn't matter
+          playerTeam.strikes || 0, // Use team strikes for XP calculation
+          difficulty?.name || 'Easy',
+          totalHoles || 9
+        );
+      }
+    } else {
+      // Free-for-all mode: use individual player stats
+      xp = calculatePlayerXP(
+        isVictory,
+        player.isCaught || false,
+        player.strikes,
+        difficulty?.name || 'Easy',
+        totalHoles || 9
+      );
+    }
+    
+    return {
+      playerId: player.id,
+      xp
+    };
+  });
 
   return (
     <div className="bg-[#cee7bd] relative size-full min-h-screen flex flex-col items-center py-[24px]" data-name="iPhone 16 Plus - 15">
@@ -119,7 +169,7 @@ export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossRe
         <div className="content-stretch flex flex-col gap-[24px] items-start relative shrink-0 w-[350px]">
           
           {/* Hooky Heroes Section */}
-          {escapedPlayers.length > 0 && (
+          {(gameMode === 'teams' ? escapedTeams.length > 0 : escapedPlayers.length > 0) && (
             <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full">
               <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0">
                 <div className="content-stretch flex gap-[12px] items-center justify-center relative shrink-0 w-[350px]">
@@ -130,7 +180,76 @@ export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossRe
                 </p>
               </div>
 
-              {escapedPlayers.map((player, index) => {
+              {gameMode === 'teams' ? (
+                // Team Mode
+                escapedTeams.map((team, index) => (
+                  <div key={team.id} className={`box-border content-stretch flex flex-col gap-[10px] items-start pb-[16px] pt-0 px-0 relative shrink-0 w-[350px] ${index < escapedTeams.length - 1 ? 'border-b border-[#517b34]' : ''}`}>
+                    {/* Team Name and Strikes */}
+                    <div className="relative w-full h-[24px]">
+                      <p className="absolute left-0 font-['Geologica:Bold',_sans-serif] font-bold text-[#517b34] text-[18px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                        {team.name}
+                      </p>
+                      <p className="absolute right-0 font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[16px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                        Strikes: {team.strikes}/{team.maxStrikes}
+                      </p>
+                    </div>
+                    
+                    {/* Team Members with Individual XP */}
+                    <div className="flex flex-col gap-[8px] w-full">
+                      {team.playerIds.map((playerId) => {
+                        const player = getPlayerById(playerId);
+                        if (!player) return null;
+                        const playerXP = playerXPs.find(p => p.playerId === playerId)?.xp || 0;
+                        
+                        return (
+                          <div key={playerId} className="flex flex-col gap-[4px] w-full">
+                            <div className="flex items-center">
+                              {player.isCurrentUser || player.friendId ? (
+                                <div className="w-[20px] h-[20px] rounded-[100px] overflow-hidden bg-[#517b34] mr-[8px]">
+                                  <Avatar className="w-full h-full">
+                                    <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                    <AvatarFallback className="bg-transparent">
+                                      <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </div>
+                              ) : (
+                                <div className="bg-[#517b34] box-border content-stretch flex flex-col gap-[10px] items-center justify-center overflow-clip px-[4px] py-[2px] relative rounded-[100px] shrink-0 w-[20px] h-[20px] mr-[8px]">
+                                  <p className="font-['Geologica:Bold',_sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[8px] text-white w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                    {getPlayerInitials(player.name)}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                {player.name}
+                              </p>
+                            </div>
+                            
+                            {/* Individual XP for team member */}
+                            {playerXP > 0 && (
+                              <div className="w-full flex items-center justify-center gap-[8px] px-[12px] py-[4px] rounded-[12px] bg-[#517b34]/10 border border-[#517b34]">
+                                <p className="luckiest-guy text-[#517b34] text-[16px]">+{playerXP} XP</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Team Perfect Banner - Full Width */}
+                    {team.strikes === 0 && (
+                      <div className="w-full flex items-center justify-center gap-[8px] px-[12px] py-[6px] rounded-[12px] bg-[#517b34]/10 border border-[#517b34]">
+                        <p className="font-['Geologica:Regular',_sans-serif] text-[#282828] text-[12px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                          🏆 Perfect Team Performance!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                // Free-for-all Mode
+                escapedPlayers.map((player, index) => {
                 const playerXP = playerXPs.find(p => p.playerId === player.id)?.xp || 0;
                 return (
                   <div key={player.id} className={`box-border content-stretch flex flex-col gap-[10px] items-start pb-[16px] pt-0 px-0 relative shrink-0 ${index < escapedPlayers.length - 1 ? 'border-b border-[#517b34]' : ''}`}>
@@ -178,12 +297,13 @@ export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossRe
                     )}
                   </div>
                 );
-              })}
+              })
+              )}
             </div>
           )}
 
           {/* Back to the Office Section */}
-          {caughtPlayers.length > 0 && (
+          {(gameMode === 'teams' ? caughtTeams.length > 0 : caughtPlayers.length > 0) && (
             <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full">
               <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0">
                 <div className="content-stretch flex gap-[12px] items-center justify-center relative shrink-0 w-[350px]">
@@ -194,7 +314,57 @@ export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossRe
                 </p>
               </div>
 
-              {caughtPlayers.map((player, index) => (
+              {gameMode === 'teams' ? (
+                // Team Mode
+                caughtTeams.map((team, index) => (
+                  <div key={team.id} className={`box-border content-stretch flex flex-col gap-[10px] items-start pb-[16px] pt-0 px-0 relative shrink-0 w-[350px] ${index < caughtTeams.length - 1 ? 'border-b border-[#517b34]' : ''}`}>
+                    {/* Team Name and Strikes */}
+                    <div className="relative w-full h-[24px]">
+                      <p className="absolute left-0 font-['Geologica:Bold',_sans-serif] font-bold text-[#C43C3C] text-[18px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                        {team.name}
+                      </p>
+                      <p className="absolute right-0 font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[16px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                        Strikes: {team.strikes}/{team.maxStrikes}
+                      </p>
+                    </div>
+                    
+                    {/* Team Members */}
+                    <div className="flex flex-col gap-[4px]">
+                      {team.playerIds.map((playerId) => {
+                        const player = getPlayerById(playerId);
+                        if (!player) return null;
+                        
+                        return (
+                          <div key={playerId} className="flex items-center">
+                            {player.isCurrentUser || player.friendId ? (
+                              <div className="w-[20px] h-[20px] rounded-[100px] overflow-hidden bg-[#517b34] mr-[8px]">
+                                <Avatar className="w-full h-full">
+                                  <AvatarImage src={player.avatarUrl || defaultAvatarImg} alt={player.name} />
+                                  <AvatarFallback className="bg-transparent">
+                                    <img src={defaultAvatarImg} alt="Default avatar" className="w-full h-full object-cover" />
+                                  </AvatarFallback>
+                                </Avatar>
+                              </div>
+                            ) : (
+                              <div className="bg-[#517b34] box-border content-stretch flex flex-col gap-[10px] items-center justify-center overflow-clip px-[4px] py-[2px] relative rounded-[100px] shrink-0 w-[20px] h-[20px] mr-[8px]">
+                                <p className="font-['Geologica:Bold',_sans-serif] font-bold leading-[normal] not-italic relative shrink-0 text-[8px] text-white w-full" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                                  {getPlayerInitials(player.name)}
+                                </p>
+                              </div>
+                            )}
+                            
+                            <p className="font-['Geologica:Light',_sans-serif] font-light text-[#282828] text-[14px]" style={{ fontVariationSettings: "'CRSV' 0, 'SHRP' 0" }}>
+                              {player.name}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                // Free-for-all Mode
+                caughtPlayers.map((player, index) => (
                 <div key={player.id} className={`box-border content-stretch flex flex-col gap-[10px] items-start pb-[16px] pt-0 px-0 relative shrink-0 ${index < caughtPlayers.length - 1 ? 'border-b border-[#517b34]' : ''}`}>
                   <div className="content-stretch flex h-[40px] items-center relative shrink-0 w-[350px]">
                     {player.isCurrentUser || player.friendId ? (
@@ -223,7 +393,8 @@ export function EndRoundSummaryScreen({ isVictory, failedAtHole, players, bossRe
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           )}
         </div>
